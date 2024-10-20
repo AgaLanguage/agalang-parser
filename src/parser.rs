@@ -78,7 +78,7 @@ pub struct Parser {
 }
 impl Parser {
     pub fn new(source: String, file_name: &String) -> Parser {
-        let tokens = super::tokenizer(source.clone(), file_name.clone());
+        let tokens = crate::lexer::tokenizer(source.clone(), file_name.clone());
         Parser {
             source: source.clone(),
             tokens,
@@ -1331,10 +1331,6 @@ impl Parser {
         } else {
             "".to_string()
         };
-        println!(
-            "line: {}, column: {}",
-            operator_t.position.line, operator_t.position.column
-        );
         self.parse_complex_expr(
             left,
             SemiToken {
