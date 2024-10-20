@@ -1,4 +1,4 @@
-use std::{fmt::format, process::ExitCode};
+use std::process::ExitCode;
 
 use ::util::List;
 use parser::ast::{Node, NodeBlock, NodeProperty};
@@ -101,7 +101,7 @@ fn json_str(str: &str) -> String {
 }
 fn json_b(b: &NodeBlock) -> String {
     format!(
-        "{{\"kind\":\"Block\",\"body\":[{}],\"in_function\":{},\"in_function\":{}}}",
+        "{{\"kind\":\"Block\",\"body\":[{}],\"in_function\":{},\"in_loop\":{}}}",
         b.body.map(|n| json(n)).join(","),
         b.in_function,
         b.in_loop
