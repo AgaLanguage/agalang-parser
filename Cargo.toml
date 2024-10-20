@@ -1,0 +1,10 @@
+[package]
+name = "agalang-parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+util = { path = "Util-rs" }
+
+[lib]
+path = "src/lib.rs"
