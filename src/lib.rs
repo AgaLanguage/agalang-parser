@@ -3,5 +3,5 @@ pub use lexer::tokenizer;
 mod parser;
 pub use parser::{*};
 
-mod internal;
-mod util;
+pub mod internal;
+pub mod util;
