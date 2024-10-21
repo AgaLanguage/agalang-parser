@@ -1,3 +1,5 @@
+use util::Location;
+
 use super::TokenType;
 
 fn is_constant(c: char) -> bool {
@@ -33,7 +35,14 @@ fn number_literal(
     }
     let token = util::Token {
         token_type: TokenType::NumberLiteral,
-        position,
+        location: Location {
+            start: position,
+            end: util::Position {
+                column: i,
+                line: position.line
+            },
+            length: i - col
+        },
         value,
         meta,
     };
@@ -55,7 +64,14 @@ fn number_base(
             return (
                 util::Token {
                     token_type: TokenType::NumberLiteral,
-                    position: pos,
+                    location: Location {
+                        start: pos,
+                        end: util::Position {
+                            column: i,
+                            line: pos.line
+                        },
+                        length: i - col
+                    },
                     value: "0".to_string(),
                     meta,
                 },
@@ -88,7 +104,14 @@ fn number_base(
                     (
                         util::Token {
                             token_type: TokenType::Error,
-                            position: pos,
+                            location: Location {
+                                start: pos,
+                                end: util::Position {
+                                    column: i,
+                                    line: pos.line
+                                },
+                                length: i - col
+                            },
                             value: format!("No se pudo analizar el byte"),
                             meta,
                         },
@@ -98,7 +121,14 @@ fn number_base(
                     (
                         util::Token {
                             token_type: TokenType::Byte,
-                            position: pos,
+                            location: Location {
+                                start: pos,
+                                end: util::Position {
+                                    column: i,
+                                    line: pos.line
+                                },
+                                length: i - col
+                            },
                             value,
                             meta,
                         },
@@ -122,7 +152,14 @@ fn number_base(
                 return (
                     util::Token {
                         token_type: TokenType::Error,
-                        position: pos,
+                        location: Location {
+                            start: pos,
+                            end: util::Position {
+                                column: pos.column,
+                                line: pos.line
+                            },
+                            length: 1
+                        },
                         value: "Se esperaba un número base".to_string(),
                         meta: format!("{meta}\0{line}\00$"),
                     },
@@ -146,7 +183,14 @@ fn number_base(
                 return (
                     util::Token {
                         token_type: TokenType::Error,
-                        position: pos,
+                        location: Location {
+                            start: pos,
+                            end: util::Position {
+                                column: i,
+                                line: pos.line
+                            },
+                            length: i - col
+                        },
                         value: "Se esperaba un número base".to_string(),
                         meta: format!("{meta}\0{line}\00$"),
                     },
@@ -158,7 +202,14 @@ fn number_base(
                 return (
                     util::Token {
                         token_type: TokenType::Error,
-                        position: pos,
+                        location: Location {
+                            start: pos,
+                            end: util::Position {
+                                column: i,
+                                line: pos.line
+                            },
+                            length: i - col
+                        },
                         value: "Se esperaba un número en base 10".to_string(),
                         meta: format!("{meta}\0{line}\00${base_str}"),
                     },
@@ -170,7 +221,14 @@ fn number_base(
                 return (
                     util::Token {
                         token_type: TokenType::Error,
-                        position: pos,
+                        location: Location {
+                            start: pos,
+                            end: util::Position {
+                                column: i,
+                                line: pos.line
+                            },
+                            length: i - col
+                        },
                         value: "La base debe estar entre 2 y 36".to_string(),
                         meta: format!("{meta}\0{line}\00${base_str}"),
                     },
@@ -183,7 +241,14 @@ fn number_base(
                 return (
                     util::Token {
                         token_type: TokenType::Error,
-                        position: pos,
+                        location: Location {
+                            start: pos,
+                            end: util::Position {
+                                column: i,
+                                line: pos.line
+                            },
+                            length: i - col
+                        },
                         value: "Se esperaba un \"~\" para el valor".to_string(),
                         meta: format!("{meta}\0{line}\00${base}"),
                     },
@@ -213,7 +278,14 @@ fn number_base(
     let value = line[value_index..i].to_string();
     let token = util::Token {
         token_type: TokenType::Number,
-        position: pos,
+        location: Location {
+            start: pos,
+            end: util::Position {
+                column: i,
+                line: pos.line
+            },
+            length: i - col
+        },
         value: format!("0${}~{}", base, value),
         meta,
     };

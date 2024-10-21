@@ -16,8 +16,7 @@ const MISSING_TOKEN: &str = "\x1b[81mToken desaparecido\x1b[0m";
 
 struct SemiToken {
     value: String,
-    column: usize,
-    line: usize,
+    location: util::Location,
 }
 
 pub fn node_error(error: &ast::NodeError) -> internal::ErrorTypes {
@@ -32,8 +31,8 @@ pub fn node_error(error: &ast::NodeError) -> internal::ErrorTypes {
         meta = &error.meta;
         message = MISSING_TOKEN;
     } else {
-        line = error.line + 1;
-        column_node = error.column + 1;
+        line = error.location.start.line + 1;
+        column_node = error.location.start.column + 1;
         meta = &error.meta;
         message = &error.message;
     }
@@ -95,7 +94,7 @@ impl Parser {
             return util::Token::<TokenType> {
                 token_type: TokenType::Error,
                 value: MISSING_TOKEN.to_string(),
-                position: util::Position { column: 0, line: 0 },
+                location: util::Location { start: util::Position {line:0,column:0}, end: util::Position {line:0,column:0}, length: 0 },
                 meta: format!("{}\0{}\0{}", &self.file_name, MISSING_TOKEN, MISSING_TOKEN),
             };
         }
@@ -103,27 +102,24 @@ impl Parser {
         util::Token::<TokenType> {
             token_type: token.token_type,
             value: token.value.clone(),
-            position: util::Position {
-                column: token.position.column,
-                line: token.position.line,
-            },
+            location: token.location,
             meta: token.meta.clone(),
         }
     }
     fn at(&self) -> util::Token<TokenType> {
         let token = self.tokens.get(self.index);
         if token.is_none() {
-            let position = self.prev().position;
-            let line = self.source.lines().nth(position.line).unwrap();
+            let location = self.prev().location;
+            let line = self.source.lines().nth(location.start.line).unwrap();
             return util::Token::<TokenType> {
                 token_type: TokenType::Error,
                 value: "Se esperaba un token".to_string(),
-                position,
+                location,
                 meta: format!(
                     "{}\0{}\0{}",
                     &self.file_name,
                     line,
-                    " ".repeat(position.column)
+                    " ".repeat(location.start.column)
                 ),
             };
         }
@@ -131,10 +127,7 @@ impl Parser {
         util::Token::<TokenType> {
             token_type: token.token_type,
             value: token.value.clone(),
-            position: util::Position {
-                column: token.position.column,
-                line: token.position.line,
-            },
+            location: token.location,
             meta: token.meta.clone(),
         }
     }
@@ -146,17 +139,17 @@ impl Parser {
     fn next(&self) -> util::Token<TokenType> {
         let token = self.tokens.get(self.index + 1);
         if token.is_none() {
-            let position = self.prev().position;
-            let line = self.source.lines().nth(position.line).unwrap();
+            let location = self.prev().location;
+            let line = self.source.lines().nth(location.start.line).unwrap();
             return util::Token::<TokenType> {
                 token_type: TokenType::Error,
                 value: "Se esperaba un token".to_string(),
-                position,
+                location,
                 meta: format!(
                     "{}\0{}\0{}",
                     &self.file_name,
                     line,
-                    " ".repeat(position.column)
+                    " ".repeat(location.start.column)
                 ),
             };
         }
@@ -164,10 +157,7 @@ impl Parser {
         util::Token::<TokenType> {
             token_type: token.token_type,
             value: token.value.clone(),
-            position: util::Position {
-                column: token.position.column,
-                line: token.position.line,
-            },
+            location: token.location,
             meta: token.meta.clone(),
         }
     }
@@ -175,45 +165,39 @@ impl Parser {
         let token = self.tokens.get(self.index);
         self.index += 1;
         if token.is_none() {
-            let position = self.prev().position;
-            let line = self.source.lines().nth(position.line).unwrap();
+            let location = self.prev().location;
+            let line = self.source.lines().nth(location.start.line).unwrap();
             return util::Token::<TokenType> {
                 token_type: TokenType::Error,
                 value: err.to_string(),
-                position,
+                location,
                 meta: format!(
                     "{}\0{}\0{}",
                     &self.file_name,
                     line,
-                    " ".repeat(position.column)
+                    " ".repeat(location.start.column)
                 ),
             };
         }
         let token = token.unwrap();
         if token.token_type != token_type {
-            let line = self.source.lines().nth(token.position.line).unwrap();
+            let line = self.source.lines().nth(token.location.start.line).unwrap();
             return util::Token::<TokenType> {
                 token_type: TokenType::Error,
                 value: err.to_string(),
-                position: util::Position {
-                    column: token.position.column,
-                    line: token.position.line,
-                },
+                location: token.location,
                 meta: format!(
                     "{}\0{}\0{}",
                     &self.file_name,
                     line,
-                    " ".repeat(token.position.column)
+                    " ".repeat(token.location.start.column)
                 ),
             };
         }
         util::Token::<TokenType> {
             token_type: token.token_type,
             value: token.value.clone(),
-            position: util::Position {
-                column: token.position.column,
-                line: token.position.line,
-            },
+            location: token.location,
             meta: token.meta.clone(),
         }
     }
@@ -223,10 +207,10 @@ impl Parser {
             return ast::Node::Error(body.err().unwrap());
         }
         let body = body.ok().unwrap();
+        let location = body.location;
         ast::Node::Program(ast::NodeProgram {
             body,
-            column: 0,
-            line: 0,
+            location,
             file: self.file_name.clone(),
         })
     }
@@ -245,8 +229,7 @@ impl Parser {
             TokenType::Error => {
                 return Some(ast::Node::Error(ast::NodeError {
                     message: token.value,
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: token.meta,
                 }));
             }
@@ -286,15 +269,13 @@ impl Parser {
                     "Se esperaba un punto y coma ({})",
                     KeywordsType::Lanzar.to_string()
                 ),
-                column: semicolon.position.column,
-                line: semicolon.position.line,
+                location: semicolon.location,
                 meta: semicolon.meta,
             });
         }
         ast::Node::Throw(ast::NodeValue {
             value: Box::new(expr),
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         })
     }
@@ -307,8 +288,7 @@ impl Parser {
         if path.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: path.value.clone(),
-                column: path.position.column,
-                line: path.position.line,
+                location: path.location,
                 meta: path.meta,
             });
         }
@@ -319,8 +299,7 @@ impl Parser {
             if alias.token_type == TokenType::Error {
                 return ast::Node::Error(ast::NodeError {
                     message: alias.value.clone(),
-                    column: alias.position.column,
-                    line: alias.position.line,
+                    location: alias.location,
                     meta: alias.meta,
                 });
             }
@@ -330,25 +309,22 @@ impl Parser {
         if semicolon.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: format!("Se esperaba un punto y coma ({})", path.value),
-                column: semicolon.position.column,
-                line: semicolon.position.line,
+                location: semicolon.location,
                 meta: semicolon.meta,
             });
         }
         if !is_global_scope {
-            let line = self.source.lines().nth(token.position.line).unwrap();
+            let line = self.source.lines().nth(token.location.start.line).unwrap();
             return ast::Node::Error(ast::NodeError {
                 message: "No se puede importar fuera del ámbito global".to_string(),
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 meta: format!("{}\0{}\0{}", &self.file_name, line, token.value),
             });
         }
         ast::Node::Import(ast::NodeImport {
             path: path.value.clone(),
             name,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta.clone(),
         })
     }
@@ -359,11 +335,10 @@ impl Parser {
             return value;
         }
         if !is_global_scope {
-            let line = self.source.lines().nth(token.position.line).unwrap();
+            let line = self.source.lines().nth(token.location.start.line).unwrap();
             let error = ast::NodeError {
                 message: "No se puede exportar fuera del ámbito global".to_string(),
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 meta: format!("{}\0{}\0{}", &self.file_name, line, token.value),
             };
             let type_err = internal::ErrorNames::SyntaxError;
@@ -374,8 +349,7 @@ impl Parser {
         }
         ast::Node::Export(ast::NodeValue {
             value: Box::new(value),
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta.clone(),
         })
     }
@@ -391,7 +365,7 @@ impl Parser {
             TokenType::Keyword(KeywordsType::Nombre) => self.parse_name_decl(),
             _ => {
                 self.eat();
-                let line = self.source.lines().nth(token.position.line).unwrap();
+                let line = self.source.lines().nth(token.location.start.line).unwrap();
                 let (message, value) = if token.token_type == TokenType::Error {
                     (token.value, "".to_string())
                 } else {
@@ -399,8 +373,7 @@ impl Parser {
                 };
                 ast::Node::Error(ast::NodeError {
                     message,
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: format!("{}\0{}\0{}", &self.file_name, line, value),
                 })
             }
@@ -412,8 +385,7 @@ impl Parser {
         if name.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: name.value.clone(),
-                column: name.position.column,
-                line: name.position.line,
+                location: name.location,
                 meta: name.meta,
             });
         }
@@ -424,15 +396,13 @@ impl Parser {
                     "Se esperaba un punto y coma ({})",
                     KeywordsType::Nombre.to_string()
                 ),
-                column: semicolon.position.column,
-                line: semicolon.position.line,
+                location: semicolon.location,
                 meta: semicolon.meta,
             });
         }
         ast::Node::Name(ast::NodeIdentifier {
             name: name.value.clone(),
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         })
     }
@@ -445,8 +415,7 @@ impl Parser {
         if name.token_type == TokenType::Error {
             return Err(ast::NodeError {
                 message: name.value.clone(),
-                column: name.position.column,
-                line: name.position.line,
+                location: name.location,
                 meta: name.meta,
             });
         }
@@ -455,8 +424,7 @@ impl Parser {
             self.eat();
             return Err(ast::NodeError {
                 message: token.value.clone(),
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 meta: token.meta,
             });
         }
@@ -486,19 +454,17 @@ impl Parser {
                     name: name.value.clone(),
                     params,
                     body,
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     file: token.meta.clone(),
                 })
             } else if token.token_type == TokenType::Operator(OperatorType::Equals) {
                 self.eat();
                 self.parse_expr()
             } else {
-                let line = self.source.lines().nth(token.position.line).unwrap();
+                let line = self.source.lines().nth(token.location.start.line).unwrap();
                 return Err(ast::NodeError {
                     message: "Se esperaba un valor".to_string(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: format!("{}\0{}\0{}", &self.file_name, line, token.value),
                 });
             };
@@ -509,8 +475,7 @@ impl Parser {
         if semicolon.token_type == TokenType::Error {
             return Err(ast::NodeError {
                 message: format!("Se esperaba un punto y coma ({})", name.value),
-                column: semicolon.position.column,
-                line: semicolon.position.line,
+                location: semicolon.location,
                 meta: semicolon.meta,
             });
         }
@@ -526,8 +491,7 @@ impl Parser {
         if name.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: name.value.clone(),
-                column: name.position.column,
-                line: name.position.line,
+                location: name.location,
                 meta: name.meta,
             });
         }
@@ -540,16 +504,15 @@ impl Parser {
             } else if let Err(token) = class_node {
                 return ast::Node::Error(ast::NodeError {
                     message: "Se esperaba un identificador".to_string(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: token.meta,
                 });
             } else {
+                let node_class = class_node.as_ref().ok().unwrap();
                 return ast::Node::Error(ast::NodeError {
                     message: "Se esperaba un identificador".to_string(),
-                    column: class_node.as_ref().ok().unwrap().get_column(),
-                    line: class_node.as_ref().ok().unwrap().get_line(),
-                    meta: class_node.as_ref().ok().unwrap().get_file(),
+                    location: node_class.get_location(),
+                    meta: node_class.get_file(),
                 });
             }
         } else {
@@ -563,8 +526,7 @@ impl Parser {
         if open_brace.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba un corchete de apertura".to_string(),
-                column: open_brace.position.column,
-                line: open_brace.position.line,
+                location: open_brace.location,
                 meta: open_brace.meta,
             });
         }
@@ -595,8 +557,7 @@ impl Parser {
         if close_brace.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba un corchete de cierre".to_string(),
-                column: close_brace.position.column,
-                line: close_brace.position.line,
+                location: close_brace.location,
                 meta: close_brace.meta,
             });
         }
@@ -604,8 +565,7 @@ impl Parser {
             name: name.value.clone(),
             extend_of,
             body,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         })
     }
@@ -618,18 +578,16 @@ impl Parser {
                 self.eat();
                 return Err(ast::NodeError {
                     message: token.value.clone(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: token.meta,
                 });
             }
             if token.token_type == TokenType::Keyword(KeywordsType::Estatico) {
                 if is_static {
-                    let line = self.source.lines().nth(token.position.line).unwrap();
+                    let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return Err(ast::NodeError {
                         message: "Modificador duplicado".to_string(),
-                        column: token.position.column,
-                        line: token.position.line,
+                        location: token.location,
                         meta: format!("{}\0{}\0{}", &self.file_name, line, token.value),
                     });
                 }
@@ -639,11 +597,10 @@ impl Parser {
             }
             if token.token_type == TokenType::Keyword(KeywordsType::Publico) {
                 if is_public {
-                    let line = self.source.lines().nth(token.position.line).unwrap();
+                    let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return Err(ast::NodeError {
                         message: "Modificador duplicado".to_string(),
-                        column: token.position.column,
-                        line: token.position.line,
+                        location: token.location,
                         meta: format!("{}\0{}\0{}", &self.file_name, line, token.value),
                     });
                 }
@@ -661,11 +618,10 @@ impl Parser {
         match token.token_type {
             TokenType::Keyword(KeywordsType::Retornar) => {
                 if !is_function {
-                    let line = self.source.lines().nth(token.position.line).unwrap();
+                    let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return ast::Node::Error(ast::NodeError {
                         message: "No se puede retornar fuera de una función".to_string(),
-                        column: token.position.column,
-                        line: token.position.line,
+                        location: token.location,
                         meta: format!("{}\0{}\0{}", &self.file_name, line, token.value),
                     });
                 }
@@ -680,26 +636,23 @@ impl Parser {
                             "Se esperaba un punto y coma ({})",
                             KeywordsType::Retornar.to_string()
                         ),
-                        column: semicolon.position.column,
-                        line: semicolon.position.line,
+                        location: semicolon.location,
                         meta: semicolon.meta,
                     });
                 }
                 return ast::Node::Return(ast::NodeReturn {
                     value: Some(expr.to_box()),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     file: token.meta,
                 });
             }
             TokenType::Keyword(KeywordsType::Romper | KeywordsType::Continuar) => {
                 if !is_loop {
-                    let line = self.source.lines().nth(token.position.line).unwrap();
+                    let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return ast::Node::Error(ast::NodeError {
                         message: "No se puede usar esta palabra clave fuera de un ciclo"
                             .to_string(),
-                        column: token.position.column,
-                        line: token.position.line,
+                        location: token.location,
                         meta: format!("{}\0{}\0{}", &self.file_name, line, token.value),
                     });
                 }
@@ -707,8 +660,7 @@ impl Parser {
                 if semicolon.token_type == TokenType::Error {
                     return ast::Node::Error(ast::NodeError {
                         message: format!("Se esperaba un punto y coma (Modificador de Bucle)"),
-                        column: semicolon.position.column,
-                        line: semicolon.position.line,
+                        location: semicolon.location,
                         meta: semicolon.meta,
                     });
                 }
@@ -719,23 +671,20 @@ impl Parser {
                 };
                 return ast::Node::LoopEdit(ast::NodeLoopEdit {
                     action,
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     file: token.meta,
                 });
             }
             TokenType::Error => ast::Node::Error(ast::NodeError {
                 message: token.value.clone(),
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 meta: token.meta,
             }),
             _ => {
-                let line = self.source.lines().nth(token.position.line).unwrap();
+                let line = self.source.lines().nth(token.location.start.line).unwrap();
                 return ast::Node::Error(ast::NodeError {
                     message: "Token inesperado (simple)".to_string(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: format!("{}\0{}\0{}", &self.file_name, line, token.value),
                 });
             }
@@ -755,17 +704,15 @@ impl Parser {
                 self.eat();
                 ast::Node::Error(ast::NodeError {
                     message: token.value.clone(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: token.meta,
                 })
             }
             _ => {
-                let line = self.source.lines().nth(token.position.line).unwrap();
+                let line = self.source.lines().nth(token.location.start.line).unwrap();
                 ast::Node::Error(ast::NodeError {
                     message: "Token inesperado (keyword)".to_string(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: format!("{}\0{}\0{}", &self.file_name, line, token.value),
                 })
             }
@@ -780,8 +727,7 @@ impl Parser {
         if open_paren.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba un paréntesis de apertura".to_string(),
-                column: open_paren.position.column,
-                line: open_paren.position.line,
+                location: open_paren.location,
                 meta: open_paren.meta,
             });
         }
@@ -794,8 +740,7 @@ impl Parser {
         if semicolon.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba un punto y coma (Para)".to_string(),
-                column: semicolon.position.column,
-                line: semicolon.position.line,
+                location: semicolon.location,
                 meta: semicolon.meta,
             });
         }
@@ -810,8 +755,7 @@ impl Parser {
         if close_paren.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba un paréntesis de cierre".to_string(),
-                column: close_paren.position.column,
-                line: close_paren.position.line,
+                location: close_paren.location,
                 meta: close_paren.meta,
             });
         }
@@ -825,8 +769,7 @@ impl Parser {
             condition: Box::new(condition),
             update: Box::new(update),
             body,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         })
     }
@@ -844,8 +787,7 @@ impl Parser {
         if catch_token.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba 'capturar'".to_string(),
-                column: catch_token.position.column,
-                line: catch_token.position.line,
+                location: catch_token.location,
                 meta: catch_token.meta,
             });
         }
@@ -856,8 +798,7 @@ impl Parser {
         if open_paren.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba un paréntesis de apertura".to_string(),
-                column: open_paren.position.column,
-                line: open_paren.position.line,
+                location: open_paren.location,
                 meta: open_paren.meta,
             });
         }
@@ -865,8 +806,7 @@ impl Parser {
         if identifier.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: identifier.value.clone(),
-                column: identifier.position.column,
-                line: identifier.position.line,
+                location: identifier.location,
                 meta: identifier.meta,
             });
         }
@@ -877,8 +817,7 @@ impl Parser {
         if close_paren.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba un paréntesis de cierre".to_string(),
-                column: close_paren.position.column,
-                line: close_paren.position.line,
+                location: close_paren.location,
                 meta: close_paren.meta,
             });
         }
@@ -902,8 +841,7 @@ impl Parser {
             body,
             catch,
             finally,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         })
     }
@@ -913,8 +851,7 @@ impl Parser {
         if name.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: name.value.clone(),
-                column: name.position.column,
-                line: name.position.line,
+                location: name.location,
                 meta: name.meta,
             });
         }
@@ -932,8 +869,7 @@ impl Parser {
             name: name.value.clone(),
             params,
             body,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         })
     }
@@ -945,8 +881,7 @@ impl Parser {
         if open_paren.token_type == TokenType::Error {
             return Err(ast::NodeError {
                 message: "Se esperaba un paréntesis de apertura".to_string(),
-                column: open_paren.position.column,
-                line: open_paren.position.line,
+                location: open_paren.location,
                 meta: open_paren.meta,
             });
         }
@@ -959,15 +894,13 @@ impl Parser {
             if param.token_type == TokenType::Error {
                 return Err(ast::NodeError {
                     message: param.value.clone(),
-                    column: param.position.column,
-                    line: param.position.line,
+                    location: param.location,
                     meta: param.meta,
                 });
             }
             params.push(ast::NodeIdentifier {
                 name: param.value.clone(),
-                column: param.position.column,
-                line: param.position.line,
+                location: param.location,
                 file: param.meta,
             });
             let comma = self.at();
@@ -978,11 +911,10 @@ impl Parser {
             if comma.token_type == TokenType::Punctuation(PunctuationType::CircularBracketClose) {
                 break;
             }
-            let line = self.source.lines().nth(comma.position.line).unwrap();
+            let line = self.source.lines().nth(comma.location.start.line).unwrap();
             return Err(ast::NodeError {
                 message: "Se esperaba una coma".to_string(),
-                column: comma.position.column,
-                line: comma.position.line,
+                location: comma.location,
                 meta: format!("{}\0{}\0{}", self.file_name, line, comma.value),
             });
         }
@@ -993,8 +925,7 @@ impl Parser {
         if close_paren.token_type == TokenType::Error {
             return Err(ast::NodeError {
                 message: "Se esperaba un paréntesis de cierre".to_string(),
-                column: close_paren.position.column,
-                line: close_paren.position.line,
+                location: close_paren.location,
                 meta: close_paren.meta,
             });
         }
@@ -1028,8 +959,7 @@ impl Parser {
                 condition: condition.to_box(),
                 body,
                 else_body,
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 file: token.meta,
             });
         }
@@ -1037,8 +967,7 @@ impl Parser {
             condition: condition.to_box(),
             body,
             else_body: None,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         });
     }
@@ -1056,8 +985,7 @@ impl Parser {
         if while_token.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba la palabra clave 'mien'".to_string(),
-                column: while_token.position.column,
-                line: while_token.position.line,
+                location: while_token.location,
                 meta: while_token.meta,
             });
         }
@@ -1072,16 +1000,14 @@ impl Parser {
                     "Se esperaba un punto y coma ({})",
                     KeywordsType::Hacer.to_string()
                 ),
-                column: semicolon.position.column,
-                line: semicolon.position.line,
+                location: semicolon.location,
                 meta: semicolon.meta,
             });
         }
         return ast::Node::DoWhile(ast::NodeWhile {
             condition: condition.to_box(),
             body,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         });
     }
@@ -1099,8 +1025,7 @@ impl Parser {
         return ast::Node::While(ast::NodeWhile {
             condition: condition.to_box(),
             body,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         });
     }
@@ -1113,19 +1038,17 @@ impl Parser {
         if open_brace.token_type == TokenType::Error {
             return Err(ast::NodeError {
                 message: "Se esperaba un bloque".to_string(),
-                column: open_brace.position.column,
-                line: open_brace.position.line,
+                location: open_brace.location,
                 meta: open_brace.meta,
             });
         }
         if self.at().token_type != TokenType::Punctuation(PunctuationType::RegularBracketOpen) {
             let expr = self.parse_stmt(false, in_function, in_loop);
             if expr.is_none() {
-                let line = self.source.lines().nth(open_brace.position.line).unwrap();
+                let line = self.source.lines().nth(open_brace.location.start.line).unwrap();
                 return Err(ast::NodeError {
                     message: "Se esperaba un bloque".to_string(),
-                    column: open_brace.position.column,
-                    line: open_brace.position.line,
+                    location: open_brace.location,
                     meta: format!("{}\0{}", self.file_name, line),
                 });
             }
@@ -1134,11 +1057,13 @@ impl Parser {
                 return Err(expr.get_error().unwrap().clone());
             }
             let mut body = List::new();
+            let location = expr.get_location();
             body.push(expr);
             return Ok(ast::NodeBlock {
                 body,
                 in_function,
                 in_loop,
+                location
             });
         }
         self.eat();
@@ -1159,8 +1084,7 @@ impl Parser {
         if close_brace.token_type == TokenType::Error {
             return Err(ast::NodeError {
                 message: "Se esperaba un corchete de cierre".to_string(),
-                column: close_brace.position.column,
-                line: close_brace.position.line,
+                location: close_brace.location,
                 meta: close_brace.meta,
             });
         }
@@ -1200,6 +1124,7 @@ impl Parser {
             body,
             in_function: false,
             in_loop: false,
+            location: util::Location { start: util::Position { line: 0, column: 0 }, end: util::Position { line: 0, column: 0 }, length: 0 }
         })
     }
     fn parse_var_decl(&mut self) -> ast::Node {
@@ -1207,88 +1132,83 @@ impl Parser {
         let is_const = token.value == "const";
         let mut semi_token = SemiToken {
             value: token.value,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
         };
 
         let identifier = self.expect(TokenType::Identifier, "Se esperaba un identificador");
-        if semi_token.line == identifier.position.line {
+        if semi_token.location.start.line == identifier.location.start.line {
             semi_token.value += " "
-                .repeat(identifier.position.column - semi_token.column)
+                .repeat(identifier.location.start.column - semi_token.location.start.column)
                 .as_str();
         } else {
             semi_token.value = "".to_string();
         };
-        semi_token.line = identifier.position.line;
-        semi_token.column = identifier.position.column;
+        semi_token.location.start.line = identifier.location.start.line;
+        semi_token.location.start.column = identifier.location.start.column;
         if identifier.token_type == TokenType::Error {
-            let line = self.source.lines().nth(semi_token.line).unwrap();
+            let line = self.source.lines().nth(semi_token.location.start.line).unwrap();
             let meta = format!("{}\0{}\0{}", self.file_name, line, semi_token.value);
             return ast::Node::Error(ast::NodeError {
                 message: identifier.value,
-                column: semi_token.column,
-                line: semi_token.line,
+                location: semi_token.location,
                 meta,
             });
         }
         semi_token.value += identifier.value.as_str();
 
         let equals_semicolon = self.eat();
-        if semi_token.line == equals_semicolon.position.line {
+        if semi_token.location.start.line == equals_semicolon.location.start.line {
             semi_token.value += " "
-                .repeat(equals_semicolon.position.column - semi_token.column)
+                .repeat(equals_semicolon.location.start.column - semi_token.location.start.column)
                 .as_str();
         } else {
             semi_token.value = "".to_string();
         };
-        semi_token.line = equals_semicolon.position.line;
-        semi_token.column = equals_semicolon.position.column;
+        semi_token.location.start.line = equals_semicolon.location.start.line;
+        semi_token.location.start.column = equals_semicolon.location.start.column;
         if equals_semicolon.token_type == TokenType::Punctuation(PunctuationType::SemiColon) {
             return ast::Node::VarDecl(ast::NodeVarDecl {
                 name: identifier.value.clone(),
                 value: None,
                 is_const,
-                column: identifier.position.column,
-                line: identifier.position.line,
+                location: identifier.location,
                 file: identifier.meta,
             });
         }
         if equals_semicolon.token_type != TokenType::Operator(OperatorType::Equals) {
-            let line = self.source.lines().nth(semi_token.line).unwrap();
+            let line = self.source.lines().nth(semi_token.location.start.line).unwrap();
             let meta = format!("{}\0{}\0{}", self.file_name, line, semi_token.value);
             return ast::Node::Error(ast::NodeError {
                 message: format!("Se esperaba un punto y coma (variable e)"),
-                column: semi_token.column,
-                line: semi_token.line,
+                location: semi_token.location,
                 meta,
             });
         }
         semi_token.value += equals_semicolon.value.as_str();
 
         let value = self.parse_expr();
-        if semi_token.line == value.get_line() {
-            semi_token.value += " ".repeat(value.get_column() - semi_token.column).as_str();
+        if semi_token.location.start.line == value.get_location().start.line {
+            semi_token.value += " ".repeat(value.get_location().start.column - semi_token.location.start.column).as_str();
         } else {
             semi_token.value = "".to_string();
         };
-        semi_token.column = value.get_column();
+        semi_token.location.start.column = value.get_location().start.column;
         if value.is_error() {
             return value;
         }
         let semicolon = self.expect(TokenType::Punctuation(PunctuationType::SemiColon), "");
-        if semi_token.line == semicolon.position.line {
+        if semi_token.location.start.line == semicolon.location.start.line {
             semi_token.value += " "
-                .repeat(semicolon.position.column - semi_token.column)
+                .repeat(semicolon.location.start.column - semi_token.location.start.column)
                 .as_str();
         } else {
             semi_token.value = "".to_string();
         };
-        semi_token.column += 1;
+        semi_token.location.start.column += 1;
         if semicolon.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: format!("Se esperaba un punto y coma (variable v)"),
-                column: semi_token.column,
-                line: semi_token.line,
+                location: semi_token.location,
                 meta: semi_token.value,
             });
         }
@@ -1296,8 +1216,7 @@ impl Parser {
             name: identifier.value.clone(),
             value: Some(value.to_box()),
             is_const,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         });
     }
@@ -1313,8 +1232,7 @@ impl Parser {
         if semicolon.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: semicolon.value,
-                column: semicolon.position.column,
-                line: semicolon.position.line,
+                location: semicolon.location,
                 meta: semicolon.meta,
             });
         }
@@ -1335,8 +1253,7 @@ impl Parser {
             left,
             SemiToken {
                 value: operator,
-                column: operator_t.position.column,
-                line: operator_t.position.line,
+                location: operator_t.location,
             },
         )
     }
@@ -1362,8 +1279,7 @@ impl Parser {
             operator,
             left: left.clone().to_box(),
             right: right.to_box(),
-            column: left.get_column(),
-            line: left.get_line(),
+            location: left.get_location(),
             file: left.get_file(),
         })
     }
@@ -1393,8 +1309,7 @@ impl Parser {
             operator,
             left: left.clone().to_box(),
             right: right.to_box(),
-            column: left.get_column(),
-            line: left.get_line(),
+            location: left.get_location(),
             file: left.get_file(),
         })
     }
@@ -1402,11 +1317,10 @@ impl Parser {
         let left = self.parse_literal_expr();
         if left.is_err() {
             let token = left.err().unwrap();
-            let line = self.source.lines().nth(token.position.line).unwrap();
+            let line = self.source.lines().nth(token.location.start.line).unwrap();
             return ast::Node::Error(ast::NodeError {
                 message: "Token inesperado (exponencial iz)".to_string(),
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 meta: format!("{}\0{}\0{}", token.meta, line, token.value),
             });
         }
@@ -1424,11 +1338,10 @@ impl Parser {
         let right = self.parse_literal_expr();
         if right.is_err() {
             let token = right.err().unwrap();
-            let line = self.source.lines().nth(token.position.line).unwrap();
+            let line = self.source.lines().nth(token.location.start.line).unwrap();
             return ast::Node::Error(ast::NodeError {
                 message: "Token inesperado (exponencial de)".to_string(),
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 meta: format!("{}\0{}\0{}", token.meta, line, token.value),
             });
         }
@@ -1440,15 +1353,14 @@ impl Parser {
             operator,
             left: left.clone().to_box(),
             right: right.to_box(),
-            column: left.get_column(),
-            line: left.get_line(),
+            location: left.get_location(),
             file: left.get_file(),
         })
     }
     fn parse_assignment_expr(&mut self, left: ast::Node, operator_st: SemiToken) -> ast::Node {
         let token = self.at();
-        let pre_operator: String = if operator_st.line == token.position.line
-            && operator_st.column == (token.position.column - 1)
+        let pre_operator: String = if operator_st.location.start.line == token.location.start.line
+            && operator_st.location.start.column == (token.location.start.column - 1)
             && token.token_type == TokenType::Operator(OperatorType::Equals)
         {
             self.eat();
@@ -1469,8 +1381,7 @@ impl Parser {
             return ast::Node::Assignment(ast::NodeAssignment {
                 identifier: left.clone().to_box(),
                 value: right.to_box(),
-                column: left.get_column(),
-                line: left.get_line(),
+                location: left.get_location(),
                 file: left.get_file(),
             });
         }
@@ -1479,8 +1390,7 @@ impl Parser {
                 operator: "==".to_string(),
                 left: left.clone().to_box(),
                 right: right.to_box(),
-                column: left.get_column(),
-                line: left.get_line(),
+                location: left.get_location(),
                 file: left.get_file(),
             });
         }
@@ -1491,13 +1401,11 @@ impl Parser {
                     operator: operator.to_string(),
                     left: left.clone().to_box(),
                     right: right.to_box(),
-                    column: left.get_column(),
-                    line: left.get_line(),
+                    location: left.get_location(),
                     file: left.get_file(),
                 })
                 .to_box(),
-                column: left.get_column(),
-                line: left.get_line(),
+                location: left.get_location(),
                 file: left.get_file(),
             });
         }
@@ -1506,16 +1414,14 @@ impl Parser {
                 operator: operator.to_string(),
                 left: left.clone().to_box(),
                 right: right.to_box(),
-                column: left.get_column(),
-                line: left.get_line(),
+                location: left.get_location(),
                 file: left.get_file(),
             });
         }
-        let line = self.source.lines().nth(token.position.line).unwrap();
+        let line = self.source.lines().nth(token.location.start.line).unwrap();
         return ast::Node::Error(ast::NodeError {
             message: "Operador no válido para asignación".to_string(),
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             meta: format!("{}\0{}\0{}", token.meta, line, token.value),
         });
     }
@@ -1528,8 +1434,7 @@ impl Parser {
         if token.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: token.value.clone(),
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 meta: token.meta,
             });
         }
@@ -1548,8 +1453,7 @@ impl Parser {
                 operator,
                 left: left.clone().to_box(),
                 right: right.to_box(),
-                column: left.get_column(),
-                line: left.get_line(),
+                location: left.get_location(),
                 file: left.get_file(),
             });
         }
@@ -1562,28 +1466,26 @@ impl Parser {
             "=" => self.parse_assignment_expr(left, operator_st),
             "?" | "|" | "&" => {
                 self.eat();
-                if operator_st.line != token.position.line
-                    || operator_st.column != (token.position.column - 1)
+                if operator_st.location.start.line != token.location.start.line
+                    || operator_st.location.start.column != (token.location.start.column - 1)
                 {
-                    let line = self.source.lines().nth(token.position.line).unwrap();
+                    let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return ast::Node::Error(ast::NodeError {
                         message: "Se esperaba una expresión (c)".to_string(),
-                        column: token.position.column,
-                        line: token.position.line,
+                        location: token.location,
                         meta: format!("{}\0{}\0{}", token.meta, line, token.value),
                     });
                 }
                 operator_st.value += token.value.as_str();
-                operator_st.column = token.position.column;
+                operator_st.location.start.column = token.location.start.column;
                 if operator_st.value != "??"
                     && operator_st.value != "||"
                     && operator_st.value != "&&"
                 {
-                    let line = self.source.lines().nth(token.position.line).unwrap();
+                    let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return ast::Node::Error(ast::NodeError {
                         message: "Operador no válido".to_string(),
-                        column: token.position.column,
-                        line: token.position.line,
+                        location: token.location,
                         meta: format!("{}\0{}\0{}", token.meta, line, token.value),
                     });
                 }
@@ -1598,8 +1500,7 @@ impl Parser {
                     operator: format!("{}", operator_st.value),
                     left: left.clone().to_box(),
                     right: right.to_box(),
-                    column: left.get_column(),
-                    line: left.get_line(),
+                    location: left.get_location(),
                     file: left.get_file(),
                 })
             }
@@ -1614,8 +1515,8 @@ impl Parser {
         let token = self.at();
         if operator_st.value == "?"
             && !(token.token_type == TokenType::Operator(OperatorType::QuestionMark)
-                && operator_st.line == token.position.line
-                && operator_st.column == (token.position.column - 1))
+                && operator_st.location.start.line == token.location.start.line
+                && operator_st.location.start.column == (token.location.start.column - 1))
         {
             let operator = operator_st.value;
             let new_operator = if let TokenType::Operator(_) = token.token_type {
@@ -1625,17 +1526,15 @@ impl Parser {
                 "".to_string()
             };
             operator_st.value = new_operator;
-            operator_st.column = token.position.column;
-            operator_st.line = token.position.line;
+            operator_st.location.start.column = token.location.start.column;
+            operator_st.location.start.line = token.location.start.line;
             let data = ast::Node::UnaryBack(ast::NodeUnary {
                 operator,
                 operand: left.to_box(),
-                column: operator_st.column,
-                line: operator_st.line,
+                location: operator_st.location,
                 file: self.file_name.clone(),
             });
-            let column = operator_st.column;
-            let line = operator_st.line;
+            let location = operator_st.location;
             return (
                 self.parse_complex_expr(data, operator_st),
                 SemiToken {
@@ -1644,8 +1543,7 @@ impl Parser {
                     } else {
                         "".to_string()
                     },
-                    column,
-                    line,
+                    location,
                 },
             );
         }
@@ -1660,8 +1558,7 @@ impl Parser {
             return (
                 value,
                 SemiToken {
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     value: if let TokenType::Operator(_) = token.token_type {
                         self.eat();
                         token.value
@@ -1705,11 +1602,10 @@ impl Parser {
                 break;
             }
 
-            let line = self.source.lines().nth(comma.position.line).unwrap();
+            let line = self.source.lines().nth(comma.location.start.line).unwrap();
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba una coma".to_string(),
-                column: comma.position.column,
-                line: comma.position.line,
+                location: comma.location,
                 meta: format!("{}\0{}\0{}", comma.meta, line, comma.value),
             });
         }
@@ -1720,29 +1616,25 @@ impl Parser {
         if close_paren.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba un paréntesis de cierre".to_string(),
-                column: close_paren.position.column,
-                line: close_paren.position.line,
+                location: close_paren.location,
                 meta: close_paren.meta,
             });
         }
         let call_expr = ast::Node::Call(ast::NodeCall {
             callee: callee.to_box(),
             arguments: args,
-            column: token.position.column,
-            line: token.position.line,
+            location: token.location,
             file: token.meta,
         });
         let semi_token = if let TokenType::Operator(_) = self.at().token_type {
             let token = self.eat();
             SemiToken {
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 value: token.value,
             }
         } else {
             SemiToken {
-                column: self.at().position.column,
-                line: self.at().position.line,
+                location: self.at().location,
                 value: "".to_string(),
             }
         };
@@ -1762,10 +1654,9 @@ impl Parser {
             } else {
                 if instance {
                     if self.at().token_type != TokenType::Punctuation(PunctuationType::DoubleDot) {
-                        let line = self.source.lines().nth(operator.position.line).unwrap();
+                        let line = self.source.lines().nth(operator.location.start.line).unwrap();
                         return ast::Node::Error(ast::NodeError {
-                            column: operator.position.column,
-                            line: operator.position.line,
+                            location: operator.location,
                             message: "Se esperaba un identificador valido".to_string(),
                             meta: format!("{}\0{}\0{}", operator.meta, line, operator.value),
                         });
@@ -1784,8 +1675,7 @@ impl Parser {
                 );
                 if close.token_type == TokenType::Error {
                     return ast::Node::Error(ast::NodeError {
-                        column: close.position.column,
-                        line: close.position.line,
+                        location: close.location,
                         message: "Se esperaba un corchete de cierre".to_string(),
                         meta: close.meta,
                     });
@@ -1796,8 +1686,7 @@ impl Parser {
                 member: property.to_box(),
                 computed,
                 instance,
-                column: value.get_column(),
-                line: value.get_line(),
+                location: value.get_location(),
                 file: value.get_file(),
             });
         }
@@ -1808,17 +1697,15 @@ impl Parser {
         match token.token_type {
             TokenType::Identifier | TokenType::Keyword(_) => {
                 ast::Node::Identifier(ast::NodeIdentifier {
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     file: token.meta,
                     name: token.value,
                 })
             }
             _ => {
-                let line = self.source.lines().nth(token.position.line).unwrap();
+                let line = self.source.lines().nth(token.location.start.line).unwrap();
                 ast::Node::Error(ast::NodeError {
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     message: "Se esperaba un identificador valido".to_string(),
                     meta: format!("{}\0{}\0{}", token.meta, line, token.value),
                 })
@@ -1830,15 +1717,13 @@ impl Parser {
         match token.token_type {
             TokenType::Identifier => Ok(ast::Node::Identifier(ast::NodeIdentifier {
                 name: self.eat().value,
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 file: token.meta,
             })),
             TokenType::NumberLiteral => Ok(ast::Node::Number(ast::NodeNumber {
                 base: 10,
                 value: self.eat().value,
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 file: token.meta,
             })),
             TokenType::Number => {
@@ -1850,26 +1735,23 @@ impl Parser {
                 return Ok(ast::Node::Number(ast::NodeNumber {
                     base,
                     value,
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     file: token.meta,
                 }));
             }
             TokenType::Byte => Ok(ast::Node::Byte(ast::NodeByte {
                 value: u8::from_str_radix(&self.eat().value, 2).expect("no es un byte"),
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 file: token.meta,
             })),
             TokenType::StringLiteral => Ok(ast::Node::String(ast::NodeString {
                 value: List::from_vec(vec![ast::StringData::Str(self.eat().value)]),
-                column: token.position.column,
-                line: token.position.line,
+                location: token.location,
                 file: token.meta,
             })),
             TokenType::String => {
                 self.eat();
-                let line = self.source.lines().nth(token.position.line).unwrap();
+                let line = self.source.lines().nth(token.location.start.line).unwrap();
                 let node = string::complex_string(token, line);
                 if node.is_err() {
                     return Ok(ast::Node::Error(node.err().unwrap()));
@@ -1889,8 +1771,7 @@ impl Parser {
                 if close_paren.token_type == TokenType::Error {
                     return Ok(ast::Node::Error(ast::NodeError {
                         message: "Se esperaba un paréntesis de cierre".to_string(),
-                        column: close_paren.position.column,
-                        line: close_paren.position.line,
+                        location: close_paren.location,
                         meta: close_paren.meta,
                     }));
                 }
@@ -1915,8 +1796,7 @@ impl Parser {
                 return Ok(ast::Node::UnaryFront(ast::NodeUnary {
                     operator: token.value,
                     operand: expr.to_box(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     file: token.meta,
                 }));
             }
@@ -1952,11 +1832,10 @@ impl Parser {
             if comma.token_type == TokenType::Punctuation(PunctuationType::RegularBracketClose) {
                 break;
             }
-            let line = self.source.lines().nth(comma.position.line).unwrap();
+            let line = self.source.lines().nth(comma.location.start.line).unwrap();
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba una coma".to_string(),
-                column: comma.position.column,
-                line: comma.position.line,
+                location: comma.location,
                 meta: format!("{}\0{}\0{}", comma.meta, line, comma.value),
             });
         }
@@ -1967,15 +1846,13 @@ impl Parser {
         if close_brace.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba una llave de cierre".to_string(),
-                column: close_brace.position.column,
-                line: close_brace.position.line,
+                location: close_brace.location,
                 meta: close_brace.meta,
             });
         }
         ast::Node::Object(ast::NodeObject {
             properties,
-            column: open_brace.position.column,
-            line: open_brace.position.line,
+            location: open_brace.location,
             file: open_brace.meta,
         })
     }
@@ -1991,8 +1868,7 @@ impl Parser {
                 if colon.token_type == TokenType::Error {
                     return Err(ast::NodeError {
                         message: colon.value,
-                        column: colon.position.column,
-                        line: colon.position.line,
+                        location: colon.location,
                         meta: colon.meta,
                     });
                 }
@@ -2005,8 +1881,7 @@ impl Parser {
                 if colon.token_type == TokenType::Error {
                     return Err(ast::NodeError {
                         message: "Se esperaba dos puntos".to_string(),
-                        column: colon.position.column,
-                        line: colon.position.line,
+                        location: colon.location,
                         meta: colon.meta,
                     });
                 }
@@ -2020,18 +1895,16 @@ impl Parser {
                         key.clone(),
                         ast::Node::Identifier(ast::NodeIdentifier {
                             name: token.value,
-                            column: token.position.column,
-                            line: token.position.line,
+                            location: token.location,
                             file: token.meta,
                         }),
                     ));
                 }
                 if colon.token_type != TokenType::Punctuation(PunctuationType::DoubleDot) {
-                    let line = self.source.lines().nth(colon.position.line).unwrap();
+                    let line = self.source.lines().nth(colon.location.start.line).unwrap();
                     return Err(ast::NodeError {
                         message: "Se esperaba dos puntos".to_string(),
-                        column: colon.position.column,
-                        line: colon.position.line,
+                        location: colon.location,
                         meta: format!("{}\0{}\0{}", colon.meta, line, colon.value),
                     });
                 }
@@ -2049,14 +1922,13 @@ impl Parser {
                         let line = self
                             .source
                             .lines()
-                            .nth(close_bracket.position.line)
+                            .nth(close_bracket.location.start.line)
                             .unwrap();
                         let meta =
                             format!("{}\0{}\0{}", close_bracket.meta, line, &close_bracket.value);
                         return Err(ast::NodeError {
                             message: close_bracket.value,
-                            column: close_bracket.position.column,
-                            line: close_bracket.position.line,
+                            location: close_bracket.location,
                             meta,
                         });
                     }
@@ -2068,8 +1940,7 @@ impl Parser {
                     if colon.token_type == TokenType::Error {
                         return Err(ast::NodeError {
                             message: colon.value,
-                            column: colon.position.column,
-                            line: colon.position.line,
+                            location: colon.location,
                             meta: colon.meta,
                         });
                     }
@@ -2084,8 +1955,7 @@ impl Parser {
                     if dot.token_type == TokenType::Error {
                         return Err(ast::NodeError {
                             message: dot.value,
-                            column: dot.position.column,
-                            line: dot.position.line,
+                            location: dot.location,
                             meta: dot.meta,
                         });
                     }
@@ -2095,20 +1965,18 @@ impl Parser {
                     }
                     return Ok(ast::NodeProperty::Iterable(data));
                 }
-                let line = self.source.lines().nth(token.position.line).unwrap();
+                let line = self.source.lines().nth(token.location.start.line).unwrap();
                 return Err(ast::NodeError {
                     message: "Se esperaba un clave para la propiedad del objeto".to_string(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: format!("{}\0{}\0{}", token.meta, line, token.value),
                 });
             }
             _ => {
-                let line = self.source.lines().nth(token.position.line).unwrap();
+                let line = self.source.lines().nth(token.location.start.line).unwrap();
                 return Err(ast::NodeError {
                     message: "Se esperaba un clave para la propiedad del objeto".to_string(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: format!("{}\0{}\0{}", token.meta, line, token.value),
                 });
             }
@@ -2136,11 +2004,10 @@ impl Parser {
             if comma.token_type == TokenType::Punctuation(PunctuationType::QuadrateBracketClose) {
                 break;
             }
-            let line = self.source.lines().nth(comma.position.line).unwrap();
+            let line = self.source.lines().nth(comma.location.start.line).unwrap();
             return ast::Node::Error(ast::NodeError {
                 message: "Se esperaba una coma".to_string(),
-                column: comma.position.column,
-                line: comma.position.line,
+                location: comma.location,
                 meta: format!("{}\0{}\0{}", comma.meta, line, comma.value),
             });
         }
@@ -2151,15 +2018,13 @@ impl Parser {
         if close_brace.token_type == TokenType::Error {
             return ast::Node::Error(ast::NodeError {
                 message: close_brace.value,
-                column: close_brace.position.column,
-                line: close_brace.position.line,
+                location: close_brace.location,
                 meta: close_brace.meta,
             });
         }
         ast::Node::Array(ast::NodeArray {
             elements,
-            column: open_bracket.position.column,
-            line: open_bracket.position.line,
+            location: open_bracket.location,
             file: open_bracket.meta,
         })
     }
@@ -2176,8 +2041,7 @@ impl Parser {
                     if dot.token_type == TokenType::Error {
                         return Err(ast::NodeError {
                             message: dot.value,
-                            column: dot.position.column,
-                            line: dot.position.line,
+                            location: dot.location,
                             meta: dot.meta,
                         });
                     }
@@ -2187,11 +2051,10 @@ impl Parser {
                     }
                     return Ok(ast::NodeProperty::Iterable(data));
                 }
-                let line = self.source.lines().nth(token.position.line).unwrap();
+                let line = self.source.lines().nth(token.location.start.line).unwrap();
                 return Err(ast::NodeError {
                     message: "Se esperaba un valor para la lista".to_string(),
-                    column: token.position.column,
-                    line: token.position.line,
+                    location: token.location,
                     meta: format!("{}\0{}\0{}", token.meta, line, token.value),
                 });
             }

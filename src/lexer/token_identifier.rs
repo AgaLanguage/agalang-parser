@@ -46,7 +46,14 @@ pub fn token_identifier(
         return (
             util::Token {
                 token_type: TokenType::None,
-                position,
+                location: util::Location {
+                    start: position,
+                    end: util::Position {
+                        column: i,
+                        line: position.line
+                    },
+                    length: 1
+                },
                 value: ch.to_string(),
                 meta,
             },
@@ -55,7 +62,14 @@ pub fn token_identifier(
     }
     let token = util::Token {
         token_type: get_type_token(&value),
-        position,
+        location: util::Location {
+            start: position,
+            end: util::Position {
+                column: i,
+                line: position.line
+            },
+            length: i - col
+        },
         value,
         meta,
     };
