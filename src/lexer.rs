@@ -7,7 +7,7 @@ use token_string::token_string;
 mod token_identifier;
 
 use crate::{
-    internal::errors::{ErrorNames, ErrorTypes, show_error, show_multiple_errors},
+    internal::errors::{show_error, show_multiple_errors, ErrorNames, ErrorTypes},
     util::{split_meta, to_cyan},
 };
 use token_identifier::token_identifier;
@@ -18,9 +18,9 @@ const PUNCTUATION: &str = "(){}[],.;:";
 
 fn token_error(token: &util::Token<TokenType>) -> ErrorTypes {
     let (file_name, data_line, token_value) = split_meta(&token.meta);
-    let line = token.position.line + 1;
-    let column_token = token.position.column + 1;
-    let column = column_token + token_value.len();
+    let line = token.location.start.line + 1;
+    let column_token = token.location.start.column + 1;
+    let column = token.location.end.column;
     let str_line = line.to_string();
     let str_init = " ".repeat(str_line.len());
 
@@ -75,7 +75,7 @@ pub fn tokenizer(input: String, file_name: String) -> Vec<util::Token<TokenType>
             ),
             (
                 util::TokenOptionCondition::Chars(PUNCTUATION),
-                util::TokenOptionResult::Char(|c| TokenType::Punctuation(PunctuationType::from(c)))
+                util::TokenOptionResult::Char(|c| TokenType::Punctuation(PunctuationType::from(c))),
             ),
         ],
         file_name,
@@ -83,11 +83,16 @@ pub fn tokenizer(input: String, file_name: String) -> Vec<util::Token<TokenType>
     let tokens = match tokens {
         Ok(mut t) => {
             let end_token = t.get(t.len() - 1).unwrap();
+            let pos = util::Position {
+                line: end_token.location.end.line,
+                column: end_token.location.end.column + 1,
+            };
             t.push(util::Token {
                 token_type: TokenType::EOF,
-                position: util::Position {
-                    line: end_token.position.line,
-                    column: end_token.position.column + 1,
+                location: util::Location {
+                    start: pos,
+                    end: pos,
+                    length: 0
                 },
                 value: "".to_string(),
                 meta: "".to_string(),

@@ -27,7 +27,14 @@ pub fn token_string(quote: char, pos: util::Position, line: String, meta: String
               return (
                   util::Token {
                       token_type: TokenType::Error,
-                      position: pos,
+                      location: util::Location {
+                        start: pos,
+                        end: util::Position {
+                            column: str_length,
+                            line: pos.line
+                        },
+                        length: str_length - col
+                    },
                       value: "Se esperaba un caracter literal".to_string(),
                       meta: format!("{meta}\0{line}\0{quote}{str}")
                   },
@@ -52,7 +59,14 @@ pub fn token_string(quote: char, pos: util::Position, line: String, meta: String
                   return (
                       util::Token {
                           token_type: TokenType::Error,
-                          position: pos,
+                          location: util::Location {
+                            start: pos,
+                            end: util::Position {
+                                column: str_length,
+                                line: pos.line
+                            },
+                            length: str_length - col
+                        },
                           value: "Se esperaba un numero hexadecimal".to_string(),
                           meta: format!("{meta}\0{line}\0{quote}{str}")
                       },
@@ -81,7 +95,14 @@ pub fn token_string(quote: char, pos: util::Position, line: String, meta: String
                   return (
                       util::Token {
                           token_type: TokenType::Error,
-                          position: pos,
+                          location: util::Location {
+                            start: pos,
+                            end: util::Position {
+                                column: str_length,
+                                line: pos.line
+                            },
+                            length: str_length - col
+                        },
                           value: "Se esperaba un numero hexadecimal".to_string(),
                           meta: format!("{meta}\0{line}\0{quote}{str}")
                       },
@@ -106,7 +127,14 @@ pub fn token_string(quote: char, pos: util::Position, line: String, meta: String
       return (
           util::Token {
               token_type: TokenType::Error,
-              position: pos,
+              location: util::Location {
+                start: pos,
+                end: util::Position {
+                    column: str_length,
+                    line: pos.line
+                },
+                length: str_length - col
+            },
               value: format!("Se esperaba un [{quote}] para cerrar la cadena"),
               meta: format!("{meta}\0{line}\0{quote}{str}")
           },
@@ -116,7 +144,14 @@ pub fn token_string(quote: char, pos: util::Position, line: String, meta: String
   (
       util::Token {
           token_type: if quote == '\'' { TokenType::StringLiteral } else { TokenType::String },
-          position: pos,
+          location: util::Location {
+            start: pos,
+            end: util::Position {
+                column: str_length,
+                line: pos.line
+            },
+            length: str_length - col
+        },
           value: str,
           meta,
       },

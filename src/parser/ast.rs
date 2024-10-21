@@ -71,64 +71,35 @@ impl Node {
     pub fn to_box(self) -> BNode {
         Box::new(self)
     }
-    pub fn get_column(&self) -> usize {
+    pub fn get_location(&self) -> util::Location {
         match self {
-            Node::Byte(node) => node.column,
-            Node::Program(node) => node.column,
-            Node::String(node) => node.column,
-            Node::Number(node) => node.column,
-            Node::Object(node) => node.column,
-            Node::Array(node) => node.column,
-            Node::Identifier(node) => node.column,
-            Node::VarDecl(node) => node.column,
-            Node::Name(node) => node.column,
-            Node::Assignment(node) => node.column,
-            Node::Class(node) => node.column,
-            Node::While(node) | Node::DoWhile(node) => node.column,
-            Node::Try(node) => node.column,
-            Node::Function(node) => node.column,
-            Node::If(node) => node.column,
-            Node::Import(node) => node.column,
-            Node::Export(node) | Node::Throw(node) => node.column,
-            Node::UnaryFront(node) | Node::UnaryBack(node) => node.column,
-            Node::Binary(node) => node.column,
-            Node::Member(node) => node.column,
-            Node::Call(node) => node.column,
-            Node::Return(node) => node.column,
-            Node::LoopEdit(node) => node.column,
-            Node::For(node) => node.column,
-            Node::Error(node) => node.column,
-            Node::Block(_) | Node::None => 0,
-        }
-    }
-    pub fn get_line(&self) -> usize {
-        match self {
-            Node::Byte(node) => node.line,
-            Node::Program(node) => node.line,
-            Node::String(node) => node.line,
-            Node::Number(node) => node.line,
-            Node::Object(node) => node.line,
-            Node::Array(node) => node.line,
-            Node::Identifier(node) => node.line,
-            Node::Name(node) => node.line,
-            Node::VarDecl(node) => node.line,
-            Node::Assignment(node) => node.line,
-            Node::Class(node) => node.line,
-            Node::While(node) | Node::DoWhile(node) => node.line,
-            Node::Try(node) => node.line,
-            Node::Function(node) => node.line,
-            Node::If(node) => node.line,
-            Node::Import(node) => node.line,
-            Node::Export(node) | Node::Throw(node) => node.line,
-            Node::UnaryFront(node) | Node::UnaryBack(node) => node.line,
-            Node::Binary(node) => node.line,
-            Node::Member(node) => node.line,
-            Node::Call(node) => node.line,
-            Node::Return(node) => node.line,
-            Node::LoopEdit(node) => node.line,
-            Node::For(node) => node.line,
-            Node::Error(node) => node.line,
-            Node::Block(_) | Node::None => 0,
+            Node::Byte(node) => node.location,
+            Node::Program(node) => node.location,
+            Node::String(node) => node.location,
+            Node::Number(node) => node.location,
+            Node::Object(node) => node.location,
+            Node::Array(node) => node.location,
+            Node::Identifier(node) => node.location,
+            Node::VarDecl(node) => node.location,
+            Node::Name(node) => node.location,
+            Node::Assignment(node) => node.location,
+            Node::Class(node) => node.location,
+            Node::While(node) | Node::DoWhile(node) => node.location,
+            Node::Try(node) => node.location,
+            Node::Function(node) => node.location,
+            Node::If(node) => node.location,
+            Node::Import(node) => node.location,
+            Node::Export(node) | Node::Throw(node) => node.location,
+            Node::UnaryFront(node) | Node::UnaryBack(node) => node.location,
+            Node::Binary(node) => node.location,
+            Node::Member(node) => node.location,
+            Node::Call(node) => node.location,
+            Node::Return(node) => node.location,
+            Node::LoopEdit(node) => node.location,
+            Node::For(node) => node.location,
+            Node::Error(node) => node.location,
+            Node::Block(node) => node.location,
+            Node::None => util::Location { start: util::Position { line: 0, column: 0 }, end: util::Position { line: 0, column: 0 }, length: 0 },
         }
     }
     pub fn get_file(&self) -> String {
@@ -407,6 +378,7 @@ pub struct NodeBlock {
     pub body: List<Node>,
     pub in_function: bool,
     pub in_loop: bool,
+    pub location: util::Location
 }
 impl NodeBlock {
     pub fn len(&self) -> usize {
@@ -423,8 +395,7 @@ impl NodeBlock {
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeProgram {
     pub body: NodeBlock,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -435,23 +406,20 @@ pub enum StringData {
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeString {
     pub value: List<StringData>,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeNumber {
     pub base: u8,
     pub value: String,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeByte {
     pub value: u8,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -464,15 +432,13 @@ pub enum NodeProperty {
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeObject {
     pub properties: List<NodeProperty>,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeArray {
     pub elements: List<NodeProperty>,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -480,30 +446,26 @@ pub struct NodeVarDecl {
     pub name: String,
     pub value: Option<BNode>,
     pub is_const: bool,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeIdentifier {
     pub name: String,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeError {
     pub message: String,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub meta: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeUnary {
     pub operator: String,
     pub operand: BNode,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -511,16 +473,14 @@ pub struct NodeBinary {
     pub operator: String,
     pub left: BNode,
     pub right: BNode,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeAssignment {
     pub identifier: BNode,
     pub value: BNode,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -529,24 +489,21 @@ pub struct NodeMember {
     pub member: BNode,
     pub instance: bool,
     pub computed: bool,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeCall {
     pub callee: BNode,
     pub arguments: List<Node>,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeWhile {
     pub condition: BNode,
     pub body: NodeBlock,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -554,8 +511,7 @@ pub struct NodeIf {
     pub condition: BNode,
     pub body: NodeBlock,
     pub else_body: Option<NodeBlock>,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 
@@ -564,15 +520,13 @@ pub struct NodeFunction {
     pub name: String,
     pub params: List<NodeIdentifier>,
     pub body: NodeBlock,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeReturn {
     pub value: Option<BNode>,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -583,8 +537,7 @@ pub enum NodeLoopEditType {
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeLoopEdit {
     pub action: NodeLoopEditType,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -592,8 +545,7 @@ pub struct NodeTry {
     pub body: NodeBlock,
     pub catch: (String, NodeBlock),
     pub finally: Option<NodeBlock>,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -610,23 +562,20 @@ pub struct NodeClass {
     pub name: String,
     pub extend_of: Option<NodeIdentifier>,
     pub body: List<NodeClassProperty>,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeImport {
     pub path: String,
     pub name: Option<String>,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeValue {
     pub value: BNode,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
 #[derive(Clone, PartialEq, Debug)]
@@ -635,7 +584,6 @@ pub struct NodeFor {
     pub condition: BNode,
     pub update: BNode,
     pub body: NodeBlock,
-    pub column: usize,
-    pub line: usize,
+    pub location: util::Location,
     pub file: String,
 }
