@@ -121,7 +121,7 @@ fn json_p(node_p: &NodeProperty) -> String {
             format!("{{\"kind\":\"PropertyIterable\",\"value\":{}}}", json(val))
         }
         NodeProperty::Property(key, value) => format!(
-            "{{\"kind\":\"PropertyProperty\",\"key\":{},\"value\":{}}}",
+            "{{\"kind\":\"PropertyProperty\",\"key\":\"{}\",\"value\":{}}}",
             json_str(key),
             json(value)
         ),
