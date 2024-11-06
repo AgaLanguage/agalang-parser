@@ -234,20 +234,20 @@ impl Parser {
                 }));
             }
             TokenType::Keyword(key) => match key {
-                KeywordsType::Definir | KeywordsType::Constante => Some(self.parse_var_decl()),
-                KeywordsType::Mientras
-                | KeywordsType::Hacer
-                | KeywordsType::Si
-                | KeywordsType::Funcion
-                | KeywordsType::Intentar
-                | KeywordsType::Clase
+                KeywordsType::Define | KeywordsType::Constant => Some(self.parse_var_decl()),
+                KeywordsType::While
+                | KeywordsType::Do
+                | KeywordsType::If
+                | KeywordsType::Function
+                | KeywordsType::Try
+                | KeywordsType::Class
                 | KeywordsType::Para => Some(self.parse_keyword_value(is_function, is_loop)),
-                KeywordsType::Retornar | KeywordsType::Continuar | KeywordsType::Romper => {
+                KeywordsType::Return | KeywordsType::Continue | KeywordsType::Romper => {
                     Some(self.parse_simple_decl(is_function, is_loop))
                 }
-                KeywordsType::Exportar => Some(self.parse_export_decl(is_global_scope)),
-                KeywordsType::Importar => Some(self.parse_import_decl(is_global_scope)),
-                KeywordsType::Lanzar => Some(self.parse_throw_decl()),
+                KeywordsType::Export => Some(self.parse_export_decl(is_global_scope)),
+                KeywordsType::Import => Some(self.parse_import_decl(is_global_scope)),
+                KeywordsType::Throw => Some(self.parse_throw_decl()),
                 _ => {
                     self.eat();
                     None
@@ -267,7 +267,7 @@ impl Parser {
             return ast::Node::Error(ast::NodeError {
                 message: format!(
                     "Se esperaba un punto y coma ({})",
-                    KeywordsType::Lanzar.to_string()
+                    KeywordsType::Throw.to_string()
                 ),
                 location: semicolon.location,
                 meta: semicolon.meta,
@@ -293,7 +293,7 @@ impl Parser {
             });
         }
         let mut name = None;
-        if self.at().token_type == TokenType::Keyword(KeywordsType::Como) {
+        if self.at().token_type == TokenType::Keyword(KeywordsType::As) {
             self.eat();
             let alias = self.expect(TokenType::Identifier, "Se esperaba un identificador");
             if alias.token_type == TokenType::Error {
@@ -356,13 +356,13 @@ impl Parser {
     fn parse_export_value(&mut self) -> ast::Node {
         let token = self.at();
         match token.token_type {
-            TokenType::Keyword(KeywordsType::Definir | KeywordsType::Constante) => {
+            TokenType::Keyword(KeywordsType::Define | KeywordsType::Constant) => {
                 self.parse_var_decl()
             }
-            TokenType::Keyword(KeywordsType::Funcion | KeywordsType::Clase) => {
+            TokenType::Keyword(KeywordsType::Function | KeywordsType::Class) => {
                 self.parse_keyword_value(false, false)
             }
-            TokenType::Keyword(KeywordsType::Nombre) => self.parse_name_decl(),
+            TokenType::Keyword(KeywordsType::Name) => self.parse_name_decl(),
             _ => {
                 self.eat();
                 let line = self.source.lines().nth(token.location.start.line).unwrap();
@@ -394,7 +394,7 @@ impl Parser {
             return ast::Node::Error(ast::NodeError {
                 message: format!(
                     "Se esperaba un punto y coma ({})",
-                    KeywordsType::Nombre.to_string()
+                    KeywordsType::Name.to_string()
                 ),
                 location: semicolon.location,
                 meta: semicolon.meta,
@@ -582,7 +582,7 @@ impl Parser {
                     meta: token.meta,
                 });
             }
-            if token.token_type == TokenType::Keyword(KeywordsType::Estatico) {
+            if token.token_type == TokenType::Keyword(KeywordsType::Static) {
                 if is_static {
                     let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return Err(ast::NodeError {
@@ -595,7 +595,7 @@ impl Parser {
                 self.eat();
                 continue;
             }
-            if token.token_type == TokenType::Keyword(KeywordsType::Publico) {
+            if token.token_type == TokenType::Keyword(KeywordsType::Public) {
                 if is_public {
                     let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return Err(ast::NodeError {
@@ -616,7 +616,7 @@ impl Parser {
         let token = self.eat(); // TokenType::Keyword
                                 // cont rom ret
         match token.token_type {
-            TokenType::Keyword(KeywordsType::Retornar) => {
+            TokenType::Keyword(KeywordsType::Return) => {
                 if !is_function {
                     let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return ast::Node::Error(ast::NodeError {
@@ -634,7 +634,7 @@ impl Parser {
                     return ast::Node::Error(ast::NodeError {
                         message: format!(
                             "Se esperaba un punto y coma ({})",
-                            KeywordsType::Retornar.to_string()
+                            KeywordsType::Return.to_string()
                         ),
                         location: semicolon.location,
                         meta: semicolon.meta,
@@ -646,7 +646,7 @@ impl Parser {
                     file: token.meta,
                 });
             }
-            TokenType::Keyword(KeywordsType::Romper | KeywordsType::Continuar) => {
+            TokenType::Keyword(KeywordsType::Romper | KeywordsType::Continue) => {
                 if !is_loop {
                     let line = self.source.lines().nth(token.location.start.line).unwrap();
                     return ast::Node::Error(ast::NodeError {
@@ -694,12 +694,12 @@ impl Parser {
         let token = self.at();
         match token.token_type {
             TokenType::Keyword(KeywordsType::Para) => self.parse_for_decl(is_function),
-            TokenType::Keyword(KeywordsType::Mientras) => self.parse_while_decl(is_function),
-            TokenType::Keyword(KeywordsType::Hacer) => self.parse_do_while_decl(is_function),
-            TokenType::Keyword(KeywordsType::Si) => self.parse_if_decl(is_function, is_loop),
-            TokenType::Keyword(KeywordsType::Funcion) => self.parse_function_decl(),
-            TokenType::Keyword(KeywordsType::Intentar) => self.parse_try_decl(is_function, is_loop),
-            TokenType::Keyword(KeywordsType::Clase) => self.parse_class_decl(),
+            TokenType::Keyword(KeywordsType::While) => self.parse_while_decl(is_function),
+            TokenType::Keyword(KeywordsType::Do) => self.parse_do_while_decl(is_function),
+            TokenType::Keyword(KeywordsType::If) => self.parse_if_decl(is_function, is_loop),
+            TokenType::Keyword(KeywordsType::Function) => self.parse_function_decl(),
+            TokenType::Keyword(KeywordsType::Try) => self.parse_try_decl(is_function, is_loop),
+            TokenType::Keyword(KeywordsType::Class) => self.parse_class_decl(),
             TokenType::Error => {
                 self.eat();
                 ast::Node::Error(ast::NodeError {
@@ -781,7 +781,7 @@ impl Parser {
         }
         let body = block.ok().unwrap();
         let catch_token = self.expect(
-            TokenType::Keyword(KeywordsType::Capturar),
+            TokenType::Keyword(KeywordsType::Catch),
             "Se esperaba 'capturar'",
         );
         if catch_token.token_type == TokenType::Error {
@@ -826,7 +826,7 @@ impl Parser {
             return ast::Node::Error(block.err().unwrap());
         }
         let body_catch = block.ok().unwrap();
-        let finally = if self.at().token_type == TokenType::Keyword(KeywordsType::Finalmente) {
+        let finally = if self.at().token_type == TokenType::Keyword(KeywordsType::Finally) {
             self.eat();
             let block = self.parse_block_expr(is_function, is_loop);
             if block.is_err() {
@@ -943,7 +943,7 @@ impl Parser {
         }
         let body = block.ok().unwrap();
         let else_token = self.at(); // ent
-        if else_token.token_type == TokenType::Keyword(KeywordsType::Entonces) {
+        if else_token.token_type == TokenType::Keyword(KeywordsType::Else) {
             self.eat();
             let else_block = self.parse_block_expr(is_function, is_loop);
             if else_block.is_err() {
@@ -979,7 +979,7 @@ impl Parser {
         }
         let body = block.ok().unwrap();
         let while_token = self.expect(
-            TokenType::Keyword(KeywordsType::Mientras),
+            TokenType::Keyword(KeywordsType::While),
             "Se esperaba la palabra clave 'mien'",
         );
         if while_token.token_type == TokenType::Error {
@@ -998,7 +998,7 @@ impl Parser {
             return ast::Node::Error(ast::NodeError {
                 message: format!(
                     "Se esperaba un punto y coma ({})",
-                    KeywordsType::Hacer.to_string()
+                    KeywordsType::Do.to_string()
                 ),
                 location: semicolon.location,
                 meta: semicolon.meta,
@@ -1801,11 +1801,11 @@ impl Parser {
                 }));
             }
             TokenType::Keyword(
-                KeywordsType::Mientras
-                | KeywordsType::Hacer
-                | KeywordsType::Si
-                | KeywordsType::Funcion
-                | KeywordsType::Intentar,
+                KeywordsType::While
+                | KeywordsType::Do
+                | KeywordsType::If
+                | KeywordsType::Function
+                | KeywordsType::Try,
             ) => Ok(self.parse_keyword_value(false, false)),
             _ => Err(token),
         }

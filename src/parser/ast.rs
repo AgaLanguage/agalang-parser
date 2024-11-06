@@ -222,9 +222,9 @@ impl std::fmt::Display for Node {
             Node::Identifier(node) => format!("NodeIdentifier: {}", node.name),
             Node::VarDecl(node) => {
                 let keyword = if node.is_const {
-                    KeywordsType::Constante
+                    KeywordsType::Constant
                 } else {
-                    KeywordsType::Definir
+                    KeywordsType::Define
                 };
                 let keyword = keyword.as_str();
                 match &node.value {
