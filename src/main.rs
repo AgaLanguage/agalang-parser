@@ -39,23 +39,23 @@ fn json(node: &Node) -> String {
     match node {
         Node::Array(a) => format!(
             "{{\"kind\":\"Array\",\"column\":{},\"line\":{},\"file\":\"{}\",\"body\":[{}]}}",
-            a.column,
-            a.line,
+            a.location.start.column,
+            a.location.start.line,
             json_str(&a.file),
             list_property(&a.elements),
         ),
         Node::Assignment(a) => format!(
               "{{\"kind\":\"Assignment\",\"column\":{},\"line\":{},\"file\":\"{}\",\"identifier\":{},\"value\":{}}}",
-              a.column,
-              a.line,
+              a.location.start.column,
+              a.location.start.line,
               json_str(&a.file),
               json(a.identifier.as_ref()),
               json(a.value.as_ref())
             ),
         Node::Binary(b)=>format!(
           "{{\"kind\":\"Binary\",\"column\":{},\"line\":{},\"file\":\"{}\",\"left\":{},\"right\":{},\"operator\":\"{}\"}}",
-          b.column,
-          b.line,
+          b.location.start.column,
+          b.location.start.line,
           json_str(&b.file),
           json(b.left.as_ref()),
           json(b.right.as_ref()),
@@ -81,8 +81,8 @@ fn json(node: &Node) -> String {
         Node::Object(_)=> "null".to_string(),
         Node::Program(p)=>format!(
           "{{\"kind\":\"Program\",\"column\":{},\"line\":{},\"file\":\"{}\",\"body\":[{}]}}",
-          p.column,
-          p.line,
+          p.location.start.column,
+          p.location.start.line,
           json_str(&p.file),
           json_b(&p.body),
       ),
