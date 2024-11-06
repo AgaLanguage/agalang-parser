@@ -1875,7 +1875,7 @@ impl Parser {
                 let value = self.parse_expr();
                 return Ok(ast::NodeProperty::Property(key, value));
             }
-            TokenType::Identifier => {
+            TokenType::Identifier | TokenType::Keyword(_) => {
                 let key = &token.value;
                 let colon = self.eat();
                 if colon.token_type == TokenType::Error {
