@@ -445,7 +445,7 @@ impl Parser {
                     return Err(params.err().unwrap());
                 }
                 let params = params.ok().unwrap();
-                let block = self.parse_block_expr(false, false);
+                let block = self.parse_block_expr(true, false);
                 if block.is_err() {
                     return Err(block.err().unwrap());
                 }
