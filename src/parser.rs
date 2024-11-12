@@ -76,13 +76,13 @@ pub struct Parser {
     file_name: String,
 }
 impl Parser {
-    pub fn new(source: String, file_name: &String) -> Parser {
-        let tokens = crate::lexer::tokenizer(source.clone(), file_name.clone());
+    pub fn new(source: String, file_name: &str) -> Parser {
+        let tokens = crate::lexer::tokenizer(source.clone(), file_name.to_string());
         Parser {
             source: source.clone(),
             tokens,
             index: 0,
-            file_name: file_name.clone(),
+            file_name: file_name.to_string(),
         }
     }
     fn not_eof(&mut self) -> bool {
