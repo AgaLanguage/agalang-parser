@@ -271,7 +271,10 @@ impl std::fmt::Display for Node {
                 data_format(node.body.join("\n"))
             ),
             Node::Try(node) => {
-                let str_catch = format!("NodeTryCatch: {}:\n{}", node.catch.0, node.catch.1);
+                let str_catch = match &node.catch{
+                    Some(catch) => format!("NodeTryCatch: {}:\n{}", catch.0, catch.1),
+                    None => "No Catch".to_string(),
+                };
                 let str_finally = match &node.finally {
                     Some(finally) => format!("NodeTryFinally:\n{}", finally),
                     None => "No Finally".to_string(),
@@ -543,7 +546,7 @@ pub struct NodeLoopEdit {
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeTry {
     pub body: NodeBlock,
-    pub catch: (String, NodeBlock),
+    pub catch: Option<(String, NodeBlock)>,
     pub finally: Option<NodeBlock>,
     pub location: util::Location,
     pub file: String,

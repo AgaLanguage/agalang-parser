@@ -780,52 +780,46 @@ impl Parser {
             return ast::Node::Error(block.err().unwrap());
         }
         let body = block.ok().unwrap();
-        let catch_token = self.expect(
-            TokenType::Keyword(KeywordsType::Catch),
-            "Se esperaba 'capturar'",
-        );
-        if catch_token.token_type == TokenType::Error {
-            return ast::Node::Error(ast::NodeError {
-                message: "Se esperaba 'capturar'".to_string(),
-                location: catch_token.location,
-                meta: catch_token.meta,
-            });
-        }
-        let open_paren = self.expect(
-            TokenType::Punctuation(PunctuationType::CircularBracketOpen),
-            "",
-        );
-        if open_paren.token_type == TokenType::Error {
-            return ast::Node::Error(ast::NodeError {
-                message: "Se esperaba un paréntesis de apertura".to_string(),
-                location: open_paren.location,
-                meta: open_paren.meta,
-            });
-        }
-        let identifier = self.expect(TokenType::Identifier, "");
-        if identifier.token_type == TokenType::Error {
-            return ast::Node::Error(ast::NodeError {
-                message: identifier.value.clone(),
-                location: identifier.location,
-                meta: identifier.meta,
-            });
-        }
-        let close_paren = self.expect(
-            TokenType::Punctuation(PunctuationType::CircularBracketClose),
-            "",
-        );
-        if close_paren.token_type == TokenType::Error {
-            return ast::Node::Error(ast::NodeError {
-                message: "Se esperaba un paréntesis de cierre".to_string(),
-                location: close_paren.location,
-                meta: close_paren.meta,
-            });
-        }
-        let block = self.parse_block_expr(is_function, is_loop);
-        if block.is_err() {
-            return ast::Node::Error(block.err().unwrap());
-        }
-        let body_catch = block.ok().unwrap();
+        let catch = if self.at().token_type == TokenType::Keyword(KeywordsType::Catch) {
+            self.eat();
+            let open_paren = self.expect(
+                TokenType::Punctuation(PunctuationType::CircularBracketOpen),
+                "",
+            );
+            if open_paren.token_type == TokenType::Error {
+                return ast::Node::Error(ast::NodeError {
+                    message: "Se esperaba un paréntesis de apertura".to_string(),
+                    location: open_paren.location,
+                    meta: open_paren.meta,
+                });
+            }
+            let identifier = self.expect(TokenType::Identifier, "");
+            if identifier.token_type == TokenType::Error {
+                return ast::Node::Error(ast::NodeError {
+                    message: identifier.value.clone(),
+                    location: identifier.location,
+                    meta: identifier.meta,
+                });
+            }
+            let close_paren = self.expect(
+                TokenType::Punctuation(PunctuationType::CircularBracketClose),
+                "",
+            );
+            if close_paren.token_type == TokenType::Error {
+                return ast::Node::Error(ast::NodeError {
+                    message: "Se esperaba un paréntesis de cierre".to_string(),
+                    location: close_paren.location,
+                    meta: close_paren.meta,
+                });
+            }
+            let block = self.parse_block_expr(is_function, is_loop);
+            if block.is_err() {
+                return ast::Node::Error(block.err().unwrap());
+            }
+            Some((identifier.value.clone(),block.ok().unwrap()))
+        } else {
+            None
+        };
         let finally = if self.at().token_type == TokenType::Keyword(KeywordsType::Finally) {
             self.eat();
             let block = self.parse_block_expr(is_function, is_loop);
@@ -836,7 +830,6 @@ impl Parser {
         } else {
             None
         };
-        let catch = (identifier.value.clone(), body_catch);
         ast::Node::Try(ast::NodeTry {
             body,
             catch,
@@ -1284,7 +1277,7 @@ impl Parser {
         })
     }
     fn parse_math_multiplicative_expr(&mut self) -> ast::Node {
-        let left = self.parse_math_exponetial_expr();
+        let left = self.parse_math_exponential_expr();
         if left.is_error() {
             return left;
         }
@@ -1301,7 +1294,7 @@ impl Parser {
             return left;
         }
         let operator = self.eat().value;
-        let right = self.parse_math_exponetial_expr();
+        let right = self.parse_math_exponential_expr();
         if right.is_error() {
             return right;
         }
@@ -1313,7 +1306,7 @@ impl Parser {
             file: left.get_file(),
         })
     }
-    fn parse_math_exponetial_expr(&mut self) -> ast::Node {
+    fn parse_math_exponential_expr(&mut self) -> ast::Node {
         let left = self.parse_literal_expr();
         if left.is_err() {
             let token = left.err().unwrap();
