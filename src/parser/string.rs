@@ -1,5 +1,7 @@
-use super::ast::{NodeError, NodeString, StringData};
-use crate::lexer::TokenType;
+use crate::{
+    ast::{NodeError, NodeString, StringData},
+    lexer::TokenType,
+};
 use util::{List, Token};
 
 fn is_alpha(c: char) -> bool {

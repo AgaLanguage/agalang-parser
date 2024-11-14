@@ -6,9 +6,8 @@ use util::{List, Token};
 use crate::{
     internal,
     util::{split_meta, to_cyan},
+    lexer::{KeywordsType, OperatorType, PunctuationType, TokenType}
 };
-
-use super::lexer::{KeywordsType, OperatorType, PunctuationType, TokenType};
 
 const ASSIGNMENT_MODIFICATOR: [&str; 8] = ["+", "-", "*", "/", "%", "&&", "||", "??"];
 const COMPARISON: [&str; 5] = ["=", "~", "!", "<", ">"];
@@ -292,9 +291,14 @@ impl Parser {
                 meta: path.meta,
             });
         }
+        let mut is_lazy = false;
         let mut name = None;
         if self.at().token_type == TokenType::Keyword(KeywordsType::As) {
             self.eat();
+            if self.at().token_type == TokenType::Keyword(KeywordsType::Lazy) {
+                self.eat();
+                is_lazy = true;
+            }
             let alias = self.expect(TokenType::Identifier, "Se esperaba un identificador");
             if alias.token_type == TokenType::Error {
                 return ast::Node::Error(ast::NodeError {
@@ -324,6 +328,7 @@ impl Parser {
         ast::Node::Import(ast::NodeImport {
             path: path.value.clone(),
             name,
+            is_lazy,
             location: token.location,
             file: token.meta.clone(),
         })
@@ -1800,6 +1805,34 @@ impl Parser {
                 | KeywordsType::Function
                 | KeywordsType::Try,
             ) => Ok(self.parse_keyword_value(false, false)),
+            TokenType::Keyword(KeywordsType::Lazy) => {
+                self.eat();
+                let expr = self.parse_expr();
+                
+                if expr.is_error() {
+                    return Ok(expr);
+                }
+                let expression = expr.to_box();
+                return Ok(ast::Node::Lazy(ast::NodeExpressionMedicator {
+                    expression,
+                    location: token.location,
+                    file: token.meta,
+                }));
+            }
+            TokenType::Keyword(KeywordsType::Await) => {
+                self.eat();
+                let expr = self.parse_expr();
+                
+                if expr.is_error() {
+                    return Ok(expr);
+                }
+                let expression = expr.to_box();
+                return Ok(ast::Node::Await(ast::NodeExpressionMedicator {
+                    expression,
+                    location: token.location,
+                    file: token.meta,
+                }));
+            }
             _ => Err(token),
         }
     }

@@ -32,6 +32,8 @@ pub enum Node {
     Try(NodeTry),
     Throw(NodeValue),
     Block(NodeBlock),
+    Await(NodeExpressionMedicator),
+    Lazy(NodeExpressionMedicator),
 
     // Expressions //
     UnaryFront(NodeUnary),
@@ -73,6 +75,7 @@ impl Node {
     }
     pub fn get_location(&self) -> util::Location {
         match self {
+            Node::Await(node) | Node::Lazy(node) => node.location,
             Node::Byte(node) => node.location,
             Node::Program(node) => node.location,
             Node::String(node) => node.location,
@@ -104,6 +107,7 @@ impl Node {
     }
     pub fn get_file(&self) -> String {
         let file: &str = match self {
+            Node::Await(node) | Node::Lazy(node) => &node.file,
             Node::Byte(node) => &node.file,
             Node::Program(node) => &node.file,
             Node::String(node) => &node.file,
@@ -135,6 +139,8 @@ impl Node {
     }
     pub fn get_type(&self) -> &str {
         match self {
+            Node::Lazy(_) => "Lazy",
+            Node::Await(_) => "Await",
             Node::Byte(_) => "Byte",
             Node::Program(_) => "Programa",
             Node::String(_) => "Cadena",
@@ -183,6 +189,8 @@ impl std::fmt::Display for NodeBlock {
 impl std::fmt::Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let str = match self {
+            Node::Lazy(node) => format!("NodeLazy:\n  {}", node.expression),
+            Node::Await(node) => format!("NodeAwait:\n  {}", node.expression),
             Node::Byte(node) => format!("NodeByte: {}", node.value),
             Node::Block(node) => node.body.to_string(),
             Node::Program(node) => format!("NodeProgram:\n{}", data_format(node.body.to_string())),
@@ -571,6 +579,7 @@ pub struct NodeClass {
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeImport {
     pub path: String,
+    pub is_lazy: bool,
     pub name: Option<String>,
     pub location: util::Location,
     pub file: String,
@@ -587,6 +596,13 @@ pub struct NodeFor {
     pub condition: BNode,
     pub update: BNode,
     pub body: NodeBlock,
+    pub location: util::Location,
+    pub file: String,
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct NodeExpressionMedicator {
+    pub expression: BNode,
     pub location: util::Location,
     pub file: String,
 }

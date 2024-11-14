@@ -4,6 +4,7 @@ mod token_number;
 use token_number::token_number;
 mod token_string;
 use token_string::token_string;
+use util::{Position, Token};
 mod token_identifier;
 
 use crate::{
@@ -49,6 +50,22 @@ fn token_error(token: &util::Token<TokenType>) -> ErrorTypes {
     ErrorTypes::StringError(joined)
 }
 
+fn comment(_: char, position: Position, line:String, meta:String) -> (Token<TokenType>, usize){
+    let line_len = line.len();
+    let length = line_len - position.column;
+    let token = Token {
+        token_type: TokenType::None,
+        value: "".to_string(),
+        location: util::Location {
+            start: position,
+            end: Position { line: position.line, column:length },
+            length
+        },
+        meta,
+    };
+    (token, length+1)
+}
+
 pub fn tokenizer(input: String, file_name: String) -> Vec<util::Token<TokenType>> {
     let tokens = util::tokenize::<TokenType>(
         input,
@@ -76,6 +93,10 @@ pub fn tokenizer(input: String, file_name: String) -> Vec<util::Token<TokenType>
             (
                 util::TokenOptionCondition::Chars(PUNCTUATION),
                 util::TokenOptionResult::Char(|c| TokenType::Punctuation(PunctuationType::from(c))),
+            ),
+            (
+                util::TokenOptionCondition::Chars("#"),
+                util::TokenOptionResult::Full(comment),
             ),
         ],
         file_name,
