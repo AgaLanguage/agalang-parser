@@ -11,7 +11,7 @@ pub enum ErrorNames {
     LexerError,
     SyntaxError,
     CustomError(&'static str),
-    EnviromentError,
+    EnvironmentError,
     MathError,
     TypeError,
 }
@@ -24,7 +24,7 @@ impl std::fmt::Display for ErrorNames {
             ErrorNames::PathError => write!(f, "Error ruta"),
             ErrorNames::LexerError => write!(f, "Error léxico"),
             ErrorNames::SyntaxError => write!(f, "Error sintáctico"),
-            ErrorNames::EnviromentError => write!(f, "Error de entorno"),
+            ErrorNames::EnvironmentError => write!(f, "Error de entorno"),
             ErrorNames::CustomError(s) => write!(f, "{s}"),
         }
     }
@@ -32,25 +32,27 @@ impl std::fmt::Display for ErrorNames {
 
 const RED_ERROR: &str = "\x1b[1m\x1b[91merror\x1b[39m:\x1b[0m";
 
-pub fn error_to_string(type_err: &ErrorNames, err: ErrorTypes) -> String {
-    let err = match err {
-        //ErrorTypes::FmtError(e) => format!("{}: {}", type_err, e),
+pub fn error_type_to_string(err: ErrorTypes) -> String {
+    match err {
+        //ErrorTypes::FmtError(e) => format!("{}", e),
         ErrorTypes::IoError(e) => format!("{}", e),
         ErrorTypes::ErrorError(e) => format!("{}", e),
-        ErrorTypes::StringError(e) => format!("{}", e),
-    };
-    match type_err {
-        ErrorNames::None => err,
-        _ => format!("{type_err}: {err}"),
+        ErrorTypes::StringError(e) => e,
     }
 }
-pub fn show_error(type_err: &ErrorNames, err: ErrorTypes) {
-    let data = error_to_string(type_err, err);
+pub fn error_to_string(type_err: &ErrorNames, error: ErrorTypes) -> String {
+    let error = error_type_to_string(error);
+    match type_err {
+        ErrorNames::None => error,
+        _ => format!("{type_err}: {error}"),
+    }
+}
+pub fn show_error(type_err: &ErrorNames, error: ErrorTypes) {
+    let data = error_to_string(type_err, error);
     print_error(data);
 }
-
-pub fn show_multiple_errors(type_err: &ErrorNames, errs: Vec<ErrorTypes>) {
-    for err in errs {
+pub fn show_multiple_errors(type_err: &ErrorNames, errors: Vec<ErrorTypes>) {
+    for err in errors {
         show_error(type_err, err);
     }
 }

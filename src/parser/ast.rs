@@ -528,6 +528,7 @@ pub struct NodeIf {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeFunction {
+    pub is_async: bool,
     pub name: String,
     pub params: List<NodeIdentifier>,
     pub body: NodeBlock,

@@ -6,9 +6,9 @@ pub enum KeywordsType {
     Para, Romper,Return, Continue,
     Class, Static,Public,Extender,
     Try, Catch,Finally,As, Export,
-    Import, Lazy, Await
+    Import, Lazy, Await, Async
 }
-const KEYWORDS: [KeywordsType; 26] = [
+const KEYWORDS: [KeywordsType; 27] = [
     KeywordsType::None,
     KeywordsType::Define,
     KeywordsType::Constant,
@@ -34,10 +34,11 @@ const KEYWORDS: [KeywordsType; 26] = [
     KeywordsType::As,
     KeywordsType::Throw,
     KeywordsType::Lazy,
-    KeywordsType::Await
+    KeywordsType::Await,
+    KeywordsType::Async
 ];
 impl KeywordsType {
-    pub fn iter() -> [KeywordsType; 26] {
+    pub fn iter() -> [KeywordsType; 27] {
         KEYWORDS
     }
     pub fn as_str(&self) -> &str {
@@ -67,7 +68,8 @@ impl KeywordsType {
             KeywordsType::As => "como",
             KeywordsType::Throw => "lanzar",
             KeywordsType::Lazy => "vago",
-            KeywordsType::Await => "esperar"
+            KeywordsType::Await => "esperar",
+            KeywordsType::Async => "asinc"
         }
     }
     pub fn to_string(&self) -> String {

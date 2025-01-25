@@ -201,7 +201,7 @@ impl Parser {
         }
     }
     pub fn produce_ast(&mut self) -> ast::Node {
-        let body = self.parse_block(true, false, false, TokenType::EOF);
+        let body = self.parse_block(true, false, false, false, TokenType::EOF);
         if body.is_err() {
             return ast::Node::Error(body.err().unwrap());
         }
@@ -218,6 +218,7 @@ impl Parser {
         is_global_scope: bool,
         is_function: bool,
         is_loop: bool,
+        is_async: bool,
     ) -> Option<ast::Node> {
         let token = self.at();
         match token.token_type {
@@ -240,13 +241,29 @@ impl Parser {
                 | KeywordsType::Function
                 | KeywordsType::Try
                 | KeywordsType::Class
-                | KeywordsType::Para => Some(self.parse_keyword_value(is_function, is_loop)),
+                | KeywordsType::Para
+                | KeywordsType::Async => Some(self.parse_keyword_value(is_function, is_loop, is_async)),
                 KeywordsType::Return | KeywordsType::Continue | KeywordsType::Romper => {
                     Some(self.parse_simple_decl(is_function, is_loop))
                 }
                 KeywordsType::Export => Some(self.parse_export_decl(is_global_scope)),
                 KeywordsType::Import => Some(self.parse_import_decl(is_global_scope)),
                 KeywordsType::Throw => Some(self.parse_throw_decl()),
+                KeywordsType::Await => {
+                    self.eat(); // await
+                    if !is_async {
+                        return Some(ast::Node::Error(ast::NodeError {
+                            message: format!("La palabra clave '{}' solo se puede utilizar en un contexto asíncrono", KeywordsType::Await.as_str()),
+                            location: token.location,
+                            meta: token.meta,
+                        }));
+                    }
+                    Some(ast::Node::Await(ast::NodeExpressionMedicator {
+                        expression: self.parse_stmt_expr().to_box(),
+                        location: token.location,
+                        file: token.meta,
+                    }))
+                }
                 _ => {
                     self.eat();
                     None
@@ -365,7 +382,7 @@ impl Parser {
                 self.parse_var_decl()
             }
             TokenType::Keyword(KeywordsType::Function | KeywordsType::Class) => {
-                self.parse_keyword_value(false, false)
+                self.parse_keyword_value(false, false, false)
             }
             TokenType::Keyword(KeywordsType::Name) => self.parse_name_decl(),
             _ => {
@@ -416,6 +433,12 @@ impl Parser {
         is_static: bool,
         is_public: bool,
     ) -> Result<ast::NodeClassProperty, ast::NodeError> {
+        let is_async = if self.at().token_type == TokenType::Keyword(KeywordsType::Async) {
+            self.eat();
+            true
+        } else {
+            false
+        };
         let name = self.expect(TokenType::Identifier, "Se esperaba un identificador");
         if name.token_type == TokenType::Error {
             return Err(ast::NodeError {
@@ -444,25 +467,18 @@ impl Parser {
             });
         }
         let value: ast::Node =
-            if token.token_type == TokenType::Punctuation(PunctuationType::CircularBracketOpen) {
-                let params = self.parse_arguments_expr();
-                if params.is_err() {
-                    return Err(params.err().unwrap());
-                }
-                let params = params.ok().unwrap();
-                let block = self.parse_block_expr(true, false);
-                if block.is_err() {
-                    return Err(block.err().unwrap());
-                }
-                let body = block.ok().unwrap();
-                ast::Node::Function(ast::NodeFunction {
-                    name: name.value.clone(),
-                    params,
-                    body,
-                    location: token.location,
-                    file: token.meta.clone(),
-                })
-            } else if token.token_type == TokenType::Operator(OperatorType::Equals) {
+        if token.token_type == TokenType::Punctuation(PunctuationType::CircularBracketOpen) {
+            let params = self.parse_arguments_expr()?;
+            let body = self.parse_block_expr(true, false,is_async)?;
+            ast::Node::Function(ast::NodeFunction {
+                is_async,
+                name: name.value.clone(),
+                params,
+                body,
+                location: token.location,
+                file: token.meta.clone(),
+            })
+        }else if token.token_type == TokenType::Operator(OperatorType::Equals) {
                 self.eat();
                 self.parse_expr()
             } else {
@@ -695,15 +711,19 @@ impl Parser {
             }
         }
     }
-    fn parse_keyword_value(&mut self, is_function: bool, is_loop: bool) -> ast::Node {
+    fn parse_keyword_value(&mut self, is_function: bool, is_loop: bool, is_async: bool) -> ast::Node {
         let token = self.at();
         match token.token_type {
-            TokenType::Keyword(KeywordsType::Para) => self.parse_for_decl(is_function),
-            TokenType::Keyword(KeywordsType::While) => self.parse_while_decl(is_function),
-            TokenType::Keyword(KeywordsType::Do) => self.parse_do_while_decl(is_function),
-            TokenType::Keyword(KeywordsType::If) => self.parse_if_decl(is_function, is_loop),
-            TokenType::Keyword(KeywordsType::Function) => self.parse_function_decl(),
-            TokenType::Keyword(KeywordsType::Try) => self.parse_try_decl(is_function, is_loop),
+            TokenType::Keyword(KeywordsType::Para) => self.parse_for_decl(is_function, is_async),
+            TokenType::Keyword(KeywordsType::While) => self.parse_while_decl(is_function, is_async),
+            TokenType::Keyword(KeywordsType::Do) => self.parse_do_while_decl(is_function, is_async),
+            TokenType::Keyword(KeywordsType::If) => self.parse_if_decl(is_function, is_loop, is_async),
+            TokenType::Keyword(KeywordsType::Function) => self.parse_function_decl(false),
+            TokenType::Keyword(KeywordsType::Async) => {
+                self.eat();
+                self.parse_function_decl(true)
+            },
+            TokenType::Keyword(KeywordsType::Try) => self.parse_try_decl(is_function, is_loop, is_async),
             TokenType::Keyword(KeywordsType::Class) => self.parse_class_decl(),
             TokenType::Error => {
                 self.eat();
@@ -723,7 +743,7 @@ impl Parser {
             }
         }
     }
-    fn parse_for_decl(&mut self, is_function: bool) -> ast::Node {
+    fn parse_for_decl(&mut self, is_function: bool, is_async: bool) -> ast::Node {
         let token = self.eat(); // para
         let open_paren = self.expect(
             TokenType::Punctuation(PunctuationType::CircularBracketOpen),
@@ -764,7 +784,7 @@ impl Parser {
                 meta: close_paren.meta,
             });
         }
-        let block = self.parse_block_expr(is_function, true);
+        let block = self.parse_block_expr(is_function, true, is_async);
         if block.is_err() {
             return ast::Node::Error(block.err().unwrap());
         }
@@ -778,9 +798,9 @@ impl Parser {
             file: token.meta,
         })
     }
-    fn parse_try_decl(&mut self, is_function: bool, is_loop: bool) -> ast::Node {
+    fn parse_try_decl(&mut self, is_function: bool, is_loop: bool, is_async: bool) -> ast::Node {
         let token = self.eat(); // intentar
-        let block = self.parse_block_expr(is_function, is_loop);
+        let block = self.parse_block_expr(is_function, is_loop, is_async);
         if block.is_err() {
             return ast::Node::Error(block.err().unwrap());
         }
@@ -817,7 +837,7 @@ impl Parser {
                     meta: close_paren.meta,
                 });
             }
-            let block = self.parse_block_expr(is_function, is_loop);
+            let block = self.parse_block_expr(is_function, is_loop, is_async);
             if block.is_err() {
                 return ast::Node::Error(block.err().unwrap());
             }
@@ -827,7 +847,7 @@ impl Parser {
         };
         let finally = if self.at().token_type == TokenType::Keyword(KeywordsType::Finally) {
             self.eat();
-            let block = self.parse_block_expr(is_function, is_loop);
+            let block = self.parse_block_expr(is_function, is_loop, is_async);
             if block.is_err() {
                 return ast::Node::Error(block.err().unwrap());
             }
@@ -843,7 +863,7 @@ impl Parser {
             file: token.meta,
         })
     }
-    fn parse_function_decl(&mut self) -> ast::Node {
+    fn parse_function_decl(&mut self, is_async: bool) -> ast::Node {
         let token = self.eat(); // fn
         let name = self.expect(TokenType::Identifier, "Se esperaba un identificador");
         if name.token_type == TokenType::Error {
@@ -858,12 +878,13 @@ impl Parser {
             return ast::Node::Error(params.err().unwrap());
         }
         let params = params.ok().unwrap();
-        let block = self.parse_block_expr(true, false);
+        let block = self.parse_block_expr(true, false, is_async);
         if block.is_err() {
             return ast::Node::Error(block.err().unwrap());
         }
         let body = block.ok().unwrap();
         ast::Node::Function(ast::NodeFunction {
+            is_async,
             name: name.value.clone(),
             params,
             body,
@@ -929,13 +950,13 @@ impl Parser {
         }
         Ok(params)
     }
-    fn parse_if_decl(&mut self, is_function: bool, is_loop: bool) -> ast::Node {
+    fn parse_if_decl(&mut self, is_function: bool, is_loop: bool, is_async: bool) -> ast::Node {
         let token = self.eat(); // si
         let condition = self.parse_expr();
         if condition.is_error() {
             return condition;
         }
-        let block = self.parse_block_expr(is_function, is_loop);
+        let block = self.parse_block_expr(is_function, is_loop, is_async);
         if block.is_err() {
             return ast::Node::Error(block.err().unwrap());
         }
@@ -943,7 +964,7 @@ impl Parser {
         let else_token = self.at(); // ent
         if else_token.token_type == TokenType::Keyword(KeywordsType::Else) {
             self.eat();
-            let else_block = self.parse_block_expr(is_function, is_loop);
+            let else_block = self.parse_block_expr(is_function, is_loop, is_async);
             if else_block.is_err() {
                 return ast::Node::Error(else_block.err().unwrap());
             }
@@ -969,9 +990,9 @@ impl Parser {
             file: token.meta,
         });
     }
-    fn parse_do_while_decl(&mut self, is_function: bool) -> ast::Node {
+    fn parse_do_while_decl(&mut self, is_function: bool, is_async: bool) -> ast::Node {
         let token = self.eat(); // hacer
-        let block = self.parse_block_expr(is_function, true);
+        let block = self.parse_block_expr(is_function, true, is_async);
         if block.is_err() {
             return ast::Node::Error(block.err().unwrap());
         }
@@ -1009,13 +1030,13 @@ impl Parser {
             file: token.meta,
         });
     }
-    fn parse_while_decl(&mut self, is_function: bool) -> ast::Node {
+    fn parse_while_decl(&mut self, is_function: bool, is_async: bool) -> ast::Node {
         let token = self.eat(); // mien
         let condition = self.parse_expr();
         if condition.is_error() {
             return condition;
         }
-        let block = self.parse_block_expr(is_function, true);
+        let block = self.parse_block_expr(is_function, true, is_async);
         if block.is_err() {
             return ast::Node::Error(block.err().unwrap());
         }
@@ -1031,6 +1052,7 @@ impl Parser {
         &mut self,
         in_function: bool,
         in_loop: bool,
+        is_async: bool
     ) -> Result<NodeBlock, ast::NodeError> {
         let open_brace = self.at();
         if open_brace.token_type == TokenType::Error {
@@ -1041,7 +1063,7 @@ impl Parser {
             });
         }
         if self.at().token_type != TokenType::Punctuation(PunctuationType::RegularBracketOpen) {
-            let expr = self.parse_stmt(false, in_function, in_loop);
+            let expr = self.parse_stmt(false, in_function, in_loop, is_async);
             if expr.is_none() {
                 let line = self.source.lines().nth(open_brace.location.start.line).unwrap();
                 return Err(ast::NodeError {
@@ -1069,6 +1091,7 @@ impl Parser {
             false,
             in_function,
             in_loop,
+            is_async,
             TokenType::Punctuation(PunctuationType::RegularBracketClose),
         );
         if body.is_err() {
@@ -1093,6 +1116,7 @@ impl Parser {
         is_global_scope: bool,
         is_function: bool,
         is_loop: bool,
+        is_async:bool,
         stop_with: TokenType,
     ) -> Result<NodeBlock, ast::NodeError> {
         let mut body = List::new();
@@ -1100,7 +1124,7 @@ impl Parser {
         let mut functions = Vec::new();
         let mut code = Vec::new();
         while self.not_eof() && !(self.at().token_type == stop_with) && error.is_none() {
-            let stmt = self.parse_stmt(is_global_scope, is_function, is_loop);
+            let stmt = self.parse_stmt(is_global_scope, is_function, is_loop, is_async);
             if let Some(stmt) = stmt {
                 match stmt {
                     ast::Node::Error(node) => error = Some(node),
@@ -1803,8 +1827,9 @@ impl Parser {
                 | KeywordsType::Do
                 | KeywordsType::If
                 | KeywordsType::Function
-                | KeywordsType::Try,
-            ) => Ok(self.parse_keyword_value(false, false)),
+                | KeywordsType::Try
+                | KeywordsType::Async
+            ) => Ok(self.parse_keyword_value(false, false, false)),
             TokenType::Keyword(KeywordsType::Lazy) => {
                 self.eat();
                 let expr = self.parse_expr();
