@@ -4,6 +4,17 @@ use crate::lexer::KeywordsType; // is a enum with keywords
 
 pub type BNode = Box<Node>;
 
+impl<T> From<Node> for Result<Node, T> {
+    fn from(node: Node) -> Result<Node, T> {
+        Ok(node)
+    }
+}
+impl<T,U> From<Node> for Result<Result<Node, T>, U> {
+    fn from(node: Node) -> Result<Result<Node, T>, U> {
+        Ok(Ok(node))
+    }
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum Node {
     None,
@@ -43,7 +54,6 @@ pub enum Node {
     Call(NodeCall),
     Return(NodeReturn),
     LoopEdit(NodeLoopEdit),
-    Error(NodeError),
 }
 impl Node {
     pub fn is_identifier(&self) -> bool {
@@ -55,18 +65,6 @@ impl Node {
     pub fn get_identifier(&self) -> Option<&NodeIdentifier> {
         match self {
             Node::Identifier(node) => Some(node),
-            _ => None,
-        }
-    }
-    pub fn is_error(&self) -> bool {
-        match self {
-            Node::Error(_) => true,
-            _ => false,
-        }
-    }
-    pub fn get_error(&self) -> Option<&NodeError> {
-        match self {
-            Node::Error(node) => Some(node),
             _ => None,
         }
     }
@@ -100,7 +98,6 @@ impl Node {
             Node::Return(node) => node.location,
             Node::LoopEdit(node) => node.location,
             Node::For(node) => node.location,
-            Node::Error(node) => node.location,
             Node::Block(node) => node.location,
             Node::None => util::Location { start: util::Position { line: 0, column: 0 }, end: util::Position { line: 0, column: 0 }, length: 0 },
         }
@@ -132,7 +129,6 @@ impl Node {
             Node::Return(node) => &node.file,
             Node::LoopEdit(node) => &node.file,
             Node::For(node) => &node.file,
-            Node::Error(node) => &node.meta,
             Node::Block(_) | Node::None => "none",
         };
         return file.to_string();
@@ -167,7 +163,6 @@ impl Node {
             Node::Return(_) => "Retorno",
             Node::LoopEdit(_) => "Editor de bucle",
             Node::For(_) => "Para",
-            Node::Error(_) => "Error",
             Node::Block(_) => "Bloque",
             Node::None => "Nada",
             Node::Throw(_) => "Lanzar",
@@ -370,7 +365,6 @@ impl std::fmt::Display for Node {
                     NodeLoopEditType::Continue => "continue",
                 }
             ),
-            Node::Error(node) => format!("NodeError: {}", node.message),
             Node::None => "NodeNone".to_string(),
         };
         write!(f, "{}", str)

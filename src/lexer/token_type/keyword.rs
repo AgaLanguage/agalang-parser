@@ -38,10 +38,10 @@ const KEYWORDS: [KeywordsType; 27] = [
     KeywordsType::Async
 ];
 impl KeywordsType {
-    pub fn iter() -> [KeywordsType; 27] {
+    pub const fn iter() -> [KeywordsType; 27] {
         KEYWORDS
     }
-    pub fn as_str(&self) -> &str {
+    pub const fn as_str(&self) -> &str {
         match self {
             KeywordsType::None => "none",
             KeywordsType::Define => "def",

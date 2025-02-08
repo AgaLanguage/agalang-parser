@@ -2,7 +2,7 @@ use util::Location;
 
 use super::TokenType;
 
-fn is_constant(c: char) -> bool {
+const fn is_constant(c: char) -> bool {
     c == 'i' || c == 'e' || c == 'π'
 }
 fn is_number(c: char, use_dot: bool) -> bool {

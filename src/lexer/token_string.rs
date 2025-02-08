@@ -4,7 +4,7 @@ fn is_hexadecimal(v: Option<&char>) -> bool {
   if v == None {
       return false;
   }
-  let c = v.unwrap().to_owned();
+  let c = *v.unwrap();
   c.is_numeric() || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
 }
 pub fn token_string(quote: char, pos: util::Position, line: String, meta: String) -> (util::Token<TokenType>, usize) {
@@ -14,7 +14,7 @@ pub fn token_string(quote: char, pos: util::Position, line: String, meta: String
   let mut str = String::new();
   let mut closed = false;
   while src.len() > str_length {
-      let v = src.get(str_length).unwrap().to_owned();
+      let v = *src.get(str_length).unwrap();
       str_length += 1;
       if v == quote {
           closed = true;
