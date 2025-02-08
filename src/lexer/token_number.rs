@@ -88,7 +88,6 @@ fn number_base(
                 let mut x = 1;
                 while x <= 8 {
                     let bit = line.chars().nth(i);
-                    i += 1;
                     if bit.is_none() {
                         break;
                     }
@@ -99,6 +98,7 @@ fn number_base(
                     } else if bit != '_' {
                         break;
                     }
+                    i += 1;
                 }
                 return if x == 1 {
                     (
