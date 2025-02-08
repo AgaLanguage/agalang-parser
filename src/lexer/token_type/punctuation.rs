@@ -1,5 +1,6 @@
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-pub enum PunctuationType {// ( ) { } [ ] , ; : .
+pub enum PunctuationType {
+  // ( ) { } [ ] , ; : .
   None,
   CircularBracketOpen,
   CircularBracketClose,
@@ -10,22 +11,22 @@ pub enum PunctuationType {// ( ) { } [ ] , ; : .
   Comma,
   SemiColon,
   DoubleDot,
-  Dot
+  Dot,
 }
-impl PunctuationType{
+impl PunctuationType {
   pub fn from(c: char) -> Self {
     match c {
-        '(' => Self::CircularBracketOpen,
-        ')' => Self::CircularBracketClose,
-        '{' => Self::RegularBracketOpen,
-        '}' => Self::RegularBracketClose,
-        '[' => Self::QuadrateBracketOpen,
-        ']' => Self::QuadrateBracketClose,
-        ',' => Self::Comma,
-        ';' => Self::SemiColon,
-        ':' => Self::DoubleDot,
-        '.' => Self::Dot,
-        _ => Self::None,
+      '(' => Self::CircularBracketOpen,
+      ')' => Self::CircularBracketClose,
+      '{' => Self::RegularBracketOpen,
+      '}' => Self::RegularBracketClose,
+      '[' => Self::QuadrateBracketOpen,
+      ']' => Self::QuadrateBracketClose,
+      ',' => Self::Comma,
+      ';' => Self::SemiColon,
+      ':' => Self::DoubleDot,
+      '.' => Self::Dot,
+      _ => Self::None,
     }
-}
+  }
 }

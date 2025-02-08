@@ -12,13 +12,13 @@ pub fn split_meta(meta: &str) -> (&str, &str, &str) {
   let file_name = meta.next().unwrap();
   let data = meta.next();
   if data == None {
-      return (file_name, "", "")
+    return (file_name, "", "");
   }
   let mut meta = data.unwrap().split("\0");
   let line = meta.next().unwrap();
   let token = meta.next();
   if token == None {
-      return (file_name, line, "")
+    return (file_name, line, "");
   }
   let token = token.unwrap();
   (file_name, line, token)

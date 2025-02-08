@@ -9,34 +9,34 @@ mod parser;
 mod util;
 
 fn main() -> ExitCode {
-    let filename = file();
-    if filename.is_none() {
-        return ExitCode::FAILURE;
-    }
-    let filename = filename.unwrap();
-    let source = code(&filename);
+  let filename = file();
+  if filename.is_none() {
+    return ExitCode::FAILURE;
+  }
+  let filename = filename.unwrap();
+  let source = code(&filename);
 
-    if source.is_none() {
-        println!("Error al leer el archivo");
-        return ExitCode::FAILURE;
-    }
+  if source.is_none() {
+    println!("Error al leer el archivo");
+    return ExitCode::FAILURE;
+  }
 
-    let source = source.unwrap();
-    let program = parser::Parser::new(source, &filename).produce_ast();
-    if program.is_error() {
-        let type_err = internal::errors::ErrorNames::SyntaxError;
-        let node_err = program.get_error().unwrap();
-        let err = parser::node_error(&node_err);
-        let data = internal::error_to_string(&type_err, err);
-        internal::print_error(data);
-        return ExitCode::FAILURE;
-    }
-    println!("{}", json(&program));
-    ExitCode::SUCCESS
+  let source = source.unwrap();
+  let program = parser::Parser::new(source, &filename).produce_ast();
+  if program.is_error() {
+    let type_err = internal::errors::ErrorNames::SyntaxError;
+    let node_err = program.get_error().unwrap();
+    let err = parser::node_error(&node_err);
+    let data = internal::error_to_string(&type_err, err);
+    internal::print_error(data);
+    return ExitCode::FAILURE;
+  }
+  println!("{}", json(&program));
+  ExitCode::SUCCESS
 }
 
 fn json(node: &Node) -> String {
-    match node {
+  match node {
         Node::Array(a) => format!(
             "{{\"kind\":\"Array\",\"column\":{},\"line\":{},\"file\":\"{}\",\"body\":[{}]}}",
             a.location.start.column,
@@ -97,61 +97,61 @@ fn json(node: &Node) -> String {
     }
 }
 fn json_str(str: &str) -> String {
-    str.replace("\n", "\\n").replace("\"", "\\\"")
+  str.replace("\n", "\\n").replace("\"", "\\\"")
 }
 fn json_b(b: &NodeBlock) -> String {
-    format!(
-        "{{\"kind\":\"Block\",\"body\":[{}],\"in_function\":{},\"in_loop\":{}}}",
-        b.body.map(|n| json(n)).join(","),
-        b.in_function,
-        b.in_loop
-    )
+  format!(
+    "{{\"kind\":\"Block\",\"body\":[{}],\"in_function\":{},\"in_loop\":{}}}",
+    b.body.map(|n| json(n)).join(","),
+    b.in_function,
+    b.in_loop
+  )
 }
 fn json_p(node_p: &NodeProperty) -> String {
-    match node_p {
-        NodeProperty::Dynamic(key, value) => format!(
-            "{{\"kind\":\"PropertyDynamic\",\"key\":{},\"value\":{}}}",
-            json(key),
-            json(value)
-        ),
-        NodeProperty::Indexable(val) => {
-            format!("{{\"kind\":\"PropertyIndexable\",\"value\":{}}}", json(val))
-        }
-        NodeProperty::Iterable(val) => {
-            format!("{{\"kind\":\"PropertyIterable\",\"value\":{}}}", json(val))
-        }
-        NodeProperty::Property(key, value) => format!(
-            "{{\"kind\":\"PropertyProperty\",\"key\":\"{}\",\"value\":{}}}",
-            json_str(key),
-            json(value)
-        ),
+  match node_p {
+    NodeProperty::Dynamic(key, value) => format!(
+      "{{\"kind\":\"PropertyDynamic\",\"key\":{},\"value\":{}}}",
+      json(key),
+      json(value)
+    ),
+    NodeProperty::Indexable(val) => {
+      format!("{{\"kind\":\"PropertyIndexable\",\"value\":{}}}", json(val))
     }
+    NodeProperty::Iterable(val) => {
+      format!("{{\"kind\":\"PropertyIterable\",\"value\":{}}}", json(val))
+    }
+    NodeProperty::Property(key, value) => format!(
+      "{{\"kind\":\"PropertyProperty\",\"key\":\"{}\",\"value\":{}}}",
+      json_str(key),
+      json(value)
+    ),
+  }
 }
 fn list_property(list: &List<NodeProperty>) -> String {
-    list.map(|n| json_p(n)).join(",")
+  list.map(|n| json_p(n)).join(",")
 }
 
 fn file() -> Option<String> {
-    let mut args: Vec<_> = std::env::args().collect();
-    args.push("file.agal".to_string());
-    let args = args;
-    if args.len() < 2 {
-        let blue_usage = "\x1b[94m\x1b[1mUsage\x1b[39m:\x1b[0m";
-        println!("{} {} <filename>", blue_usage, args[0]);
-        return None;
-    }
-    Some(args[1].to_string())
+  let mut args: Vec<_> = std::env::args().collect();
+  args.push("file.agal".to_string());
+  let args = args;
+  if args.len() < 2 {
+    let blue_usage = "\x1b[94m\x1b[1mUsage\x1b[39m:\x1b[0m";
+    println!("{} {} <filename>", blue_usage, args[0]);
+    return None;
+  }
+  Some(args[1].to_string())
 }
 fn code(filename: &str) -> Option<String> {
-    let path = std::path::Path::new(filename);
-    let contents = std::fs::read_to_string(path);
-    match contents {
-        Ok(contents) => Some(contents),
-        Err(err) => {
-            let ref type_err = internal::ErrorNames::PathError;
-            let err = internal::ErrorTypes::IoError(err);
-            internal::show_error(type_err, err);
-            None
-        }
+  let path = std::path::Path::new(filename);
+  let contents = std::fs::read_to_string(path);
+  match contents {
+    Ok(contents) => Some(contents),
+    Err(err) => {
+      let ref type_err = internal::ErrorNames::PathError;
+      let err = internal::ErrorTypes::IoError(err);
+      internal::show_error(type_err, err);
+      None
     }
+  }
 }

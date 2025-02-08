@@ -262,15 +262,17 @@ impl Parser {
               meta: token.meta,
             }));
           }
-          Some(ast::Node::Await(ast::NodeExpressionMedicator {
-            expression: match self.parse_stmt_expr() {
-              Err(e) => return Some(Err(e)),
-              Ok(expr) => expr.to_box(),
-            },
-            location: token.location,
-            file: token.meta,
-          })
-          .into())
+          Some(
+            ast::Node::Await(ast::NodeExpressionMedicator {
+              expression: match self.parse_stmt_expr() {
+                Err(e) => return Some(Err(e)),
+                Ok(expr) => expr.to_box(),
+              },
+              location: token.location,
+              file: token.meta,
+            })
+            .into(),
+          )
         }
         _ => {
           self.eat();
@@ -298,7 +300,8 @@ impl Parser {
       value: Box::new(expr),
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn parse_import_decl(&mut self, is_global_scope: bool) -> Result<ast::Node, NodeError> {
     let token = self.eat(); // importar
@@ -353,7 +356,8 @@ impl Parser {
       is_lazy,
       location: token.location,
       file: token.meta.clone(),
-    }).into()
+    })
+    .into()
   }
   fn parse_export_decl(&mut self, is_global_scope: bool) -> Result<ast::Node, NodeError> {
     let token = self.eat(); // exportar
@@ -375,7 +379,8 @@ impl Parser {
       value: Box::new(value),
       location: token.location,
       file: token.meta.clone(),
-    }).into()
+    })
+    .into()
   }
   fn parse_export_value(&mut self) -> Result<ast::Node, NodeError> {
     let token = self.at();
@@ -426,7 +431,8 @@ impl Parser {
       name: name.value.clone(),
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn parse_class_prop(
     &mut self,
@@ -584,7 +590,8 @@ impl Parser {
       body,
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn get_modifier(&mut self) -> Result<(bool, bool), ast::NodeError> {
     let mut is_static = false;
@@ -662,7 +669,8 @@ impl Parser {
           value: Some(expr.to_box()),
           location: token.location,
           file: token.meta,
-        }).into()
+        })
+        .into()
       }
       TokenType::Keyword(KeywordsType::Romper | KeywordsType::Continue) => {
         if !is_loop {
@@ -690,7 +698,8 @@ impl Parser {
           action,
           location: token.location,
           file: token.meta,
-        }).into()
+        })
+        .into()
       }
       TokenType::Error => Err(ast::NodeError {
         message: token.value.clone(),
@@ -791,7 +800,8 @@ impl Parser {
       body,
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn parse_try_decl(
     &mut self,
@@ -861,7 +871,8 @@ impl Parser {
       finally,
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn parse_function_decl(&mut self, is_async: bool) -> Result<ast::Node, NodeError> {
     let token = self.eat(); // fn
@@ -890,7 +901,8 @@ impl Parser {
       body,
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn parse_arguments_expr(&mut self) -> Result<List<ast::NodeIdentifier>, ast::NodeError> {
     let open_paren = self.expect(
@@ -977,7 +989,8 @@ impl Parser {
         else_body,
         location: token.location,
         file: token.meta,
-      }).into();
+      })
+      .into();
     }
     ast::Node::If(ast::NodeIf {
       condition: condition.to_box(),
@@ -985,7 +998,8 @@ impl Parser {
       else_body: None,
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn parse_do_while_decl(
     &mut self,
@@ -1022,7 +1036,8 @@ impl Parser {
       body,
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn parse_while_decl(
     &mut self,
@@ -1041,7 +1056,8 @@ impl Parser {
       body,
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn parse_block_expr(
     &mut self,
@@ -1195,7 +1211,8 @@ impl Parser {
         is_const,
         location: identifier.location,
         file: identifier.meta,
-      }).into();
+      })
+      .into();
     }
     if equals_semicolon.token_type != TokenType::Operator(OperatorType::Equals) {
       let line = self
@@ -1243,7 +1260,8 @@ impl Parser {
       is_const,
       location: token.location,
       file: token.meta,
-    }).into()
+    })
+    .into()
   }
   fn parse_stmt_expr(&mut self) -> Result<ast::Node, NodeError> {
     let node = self.parse_expr();
@@ -1716,13 +1734,15 @@ impl Parser {
         name: self.eat().value,
         location: token.location,
         file: token.meta,
-      }).into(),
+      })
+      .into(),
       TokenType::NumberLiteral => ast::Node::Number(ast::NodeNumber {
         base: 10,
         value: self.eat().value,
         location: token.location,
         file: token.meta,
-      }).into(),
+      })
+      .into(),
       TokenType::Number => {
         self.eat();
         let data = token.value.split("$").collect::<Vec<_>>()[1];
@@ -1734,18 +1754,21 @@ impl Parser {
           value,
           location: token.location,
           file: token.meta,
-        }).into()
+        })
+        .into()
       }
       TokenType::Byte => ast::Node::Byte(ast::NodeByte {
         value: u8::from_str_radix(&self.eat().value, 2).expect("no es un byte"),
         location: token.location,
         file: token.meta,
-      }).into(),
+      })
+      .into(),
       TokenType::StringLiteral => ast::Node::String(ast::NodeString {
         value: List::from_vec(vec![ast::StringData::Str(self.eat().value)]),
         location: token.location,
         file: token.meta,
-      }).into(),
+      })
+      .into(),
       TokenType::String => {
         self.eat();
         let line = self.source.lines().nth(token.location.start.line).unwrap();

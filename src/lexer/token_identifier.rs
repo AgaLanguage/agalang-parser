@@ -1,78 +1,78 @@
-use super::{TokenType, KeywordsType};
+use super::{KeywordsType, TokenType};
 
 fn get_keyword(s: &str) -> KeywordsType {
-    for keyword in KeywordsType::iter() {
-        if keyword.as_str() == s {
-            return keyword;
-        }
+  for keyword in KeywordsType::iter() {
+    if keyword.as_str() == s {
+      return keyword;
     }
-    KeywordsType::None
+  }
+  KeywordsType::None
 }
 
 fn is_alpha(c: char) -> bool {
-    c.is_alphabetic() || c == '_' || c == '$' || c.is_ascii_digit()
+  c.is_alphabetic() || c == '_' || c == '$' || c.is_ascii_digit()
 }
 
 fn get_type_token(s: &str) -> TokenType {
-    let keyword = get_keyword(s);
-    if keyword == KeywordsType::None {
-        return TokenType::Identifier;
-    }
-    TokenType::Keyword(keyword)
+  let keyword = get_keyword(s);
+  if keyword == KeywordsType::None {
+    return TokenType::Identifier;
+  }
+  TokenType::Keyword(keyword)
 }
 
 pub fn token_identifier(
-    ch: char,
-    position: util::Position,
-    ref line: String,
-    meta: String,
+  ch: char,
+  position: util::Position,
+  ref line: String,
+  meta: String,
 ) -> (util::Token<TokenType>, usize) {
-    let col = position.column;
-    let mut i = col;
-    let mut value = String::new();
-    while i < line.len() {
-        let c = line.chars().nth(i);
-        if c.is_none() {
-            break;
-        }
-        let c = c.unwrap();
-        if !is_alpha(c) {
-            break;
-        }
-        value.push(c);
-        i += 1;
+  let col = position.column;
+  let mut i = col;
+  let mut value = String::new();
+  while i < line.len() {
+    let c = line.chars().nth(i);
+    if c.is_none() {
+      break;
     }
-    if i == col {
-        return (
-            util::Token {
-                token_type: TokenType::None,
-                location: util::Location {
-                    start: position,
-                    end: util::Position {
-                        column: i,
-                        line: position.line
-                    },
-                    length: 1
-                },
-                value: ch.to_string(),
-                meta,
-            },
-            0,
-        );
+    let c = c.unwrap();
+    if !is_alpha(c) {
+      break;
     }
-    let token = util::Token {
-        token_type: get_type_token(&value),
+    value.push(c);
+    i += 1;
+  }
+  if i == col {
+    return (
+      util::Token {
+        token_type: TokenType::None,
         location: util::Location {
-            start: position,
-            end: util::Position {
-                column: i,
-                line: position.line
-            },
-            length: i - col
+          start: position,
+          end: util::Position {
+            column: i,
+            line: position.line,
+          },
+          length: 1,
         },
-        value,
+        value: ch.to_string(),
         meta,
-    };
+      },
+      0,
+    );
+  }
+  let token = util::Token {
+    token_type: get_type_token(&value),
+    location: util::Location {
+      start: position,
+      end: util::Position {
+        column: i,
+        line: position.line,
+      },
+      length: i - col,
+    },
+    value,
+    meta,
+  };
 
-    (token, i - col -1)
+  (token, i - col - 1)
 }
