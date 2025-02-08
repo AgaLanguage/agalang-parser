@@ -205,7 +205,7 @@ impl Parser {
     }
   }
   pub fn produce_ast(&mut self) -> Result<ast::Node, NodeError> {
-    let body = self.parse_block(true, false, false, false, TokenType::EOF)?;
+    let body = self.parse_block(true, false, false, true, TokenType::EOF)?;
     let location = body.location;
     ast::Node::Program(ast::NodeProgram {
       body,
@@ -243,7 +243,7 @@ impl Parser {
         | KeywordsType::Try
         | KeywordsType::Class
         | KeywordsType::Para
-        | KeywordsType::Async => Some(self.parse_keyword_value(is_function, is_loop, is_async)),
+        | KeywordsType::Async => Some(self.parse_keyword_value(is_function, is_loop, true)),
         KeywordsType::Return | KeywordsType::Continue | KeywordsType::Romper => {
           Some(self.parse_simple_decl(is_function, is_loop))
         }
