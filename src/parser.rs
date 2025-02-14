@@ -36,7 +36,7 @@ pub fn node_error(error: &ast::NodeError) -> internal::ErrorTypes {
     message = &error.message;
   }
 
-  let (file, data_line, node_value) = split_meta(&meta);
+  let (data_line, node_value) = split_meta(&meta);
 
   let column = column_node + node_value.len();
 
@@ -53,7 +53,7 @@ pub fn node_error(error: &ast::NodeError) -> internal::ErrorTypes {
   };
   let lines = [
     format!("{}", message),
-    format!("{}{cyan_arrow} {}:{}:{}", str_init, file, line, column),
+    format!("{}{cyan_arrow} {}:{}:{}", str_init, error.location.file_name, line, column),
     format!("{} {cyan_line}", str_init),
     format!("{} {cyan_line} {}", to_cyan(&str_line), data_line),
     format!(
@@ -97,6 +97,7 @@ impl Parser {
           start: util::Position { line: 0, column: 0 },
           end: util::Position { line: 0, column: 0 },
           length: 0,
+          file_name: self.file_name.clone(),
         },
         meta: format!("{}\0{}\0{}", &self.file_name, MISSING_TOKEN, MISSING_TOKEN),
       };
@@ -105,19 +106,19 @@ impl Parser {
     util::Token::<TokenType> {
       token_type: token.token_type,
       value: token.value.clone(),
-      location: token.location,
+      location: token.location.clone(),
       meta: token.meta.clone(),
     }
   }
   fn at(&self) -> util::Token<TokenType> {
     let token = self.tokens.get(self.index);
     if token.is_none() {
-      let location = self.prev().location;
-      let line = self.source.lines().nth(location.start.line).unwrap();
+      let location = self.prev().location.clone();
+      let line = self.source.lines().nth(location.clone().start.line).unwrap();
       return util::Token::<TokenType> {
         token_type: TokenType::Error,
         value: "Se esperaba un token".to_string(),
-        location,
+        location:location.clone(),
         meta: format!(
           "{}\0{}\0{}",
           &self.file_name,
@@ -130,7 +131,7 @@ impl Parser {
     util::Token::<TokenType> {
       token_type: token.token_type,
       value: token.value.clone(),
-      location: token.location,
+      location: token.location.clone(),
       meta: token.meta.clone(),
     }
   }
@@ -142,12 +143,12 @@ impl Parser {
   fn next(&self) -> util::Token<TokenType> {
     let token = self.tokens.get(self.index + 1);
     if token.is_none() {
-      let location = self.prev().location;
-      let line = self.source.lines().nth(location.start.line).unwrap();
+      let location = self.prev().location.clone();
+      let line = self.source.lines().nth(location.clone().start.line).unwrap();
       return util::Token::<TokenType> {
         token_type: TokenType::Error,
         value: "Se esperaba un token".to_string(),
-        location,
+        location:location.clone(),
         meta: format!(
           "{}\0{}\0{}",
           &self.file_name,
@@ -160,7 +161,7 @@ impl Parser {
     util::Token::<TokenType> {
       token_type: token.token_type,
       value: token.value.clone(),
-      location: token.location,
+      location: token.location.clone(),
       meta: token.meta.clone(),
     }
   }
@@ -168,12 +169,12 @@ impl Parser {
     let token = self.tokens.get(self.index);
     self.index += 1;
     if token.is_none() {
-      let location = self.prev().location;
-      let line = self.source.lines().nth(location.start.line).unwrap();
+      let location = self.prev().location.clone();
+      let line = self.source.lines().nth(location.clone().start.line).unwrap();
       return util::Token::<TokenType> {
         token_type: TokenType::Error,
         value: err.to_string(),
-        location,
+        location:location.clone(),
         meta: format!(
           "{}\0{}\0{}",
           &self.file_name,
@@ -184,11 +185,11 @@ impl Parser {
     }
     let token = token.unwrap();
     if token.token_type != token_type {
-      let line = self.source.lines().nth(token.location.start.line).unwrap();
+      let line = self.source.lines().nth(token.location.clone().start.line).unwrap();
       return util::Token::<TokenType> {
         token_type: TokenType::Error,
         value: err.to_string(),
-        location: token.location,
+        location: token.location.clone(),
         meta: format!(
           "{}\0{}\0{}",
           &self.file_name,
@@ -200,13 +201,13 @@ impl Parser {
     util::Token::<TokenType> {
       token_type: token.token_type,
       value: token.value.clone(),
-      location: token.location,
+      location: token.location.clone(),
       meta: token.meta.clone(),
     }
   }
   pub fn produce_ast(&mut self) -> Result<ast::Node, NodeError> {
     let body = self.parse_block(true, false, false, true, TokenType::EOF)?;
-    let location = body.location;
+    let location = body.clone().location;
     ast::Node::Program(ast::NodeProgram {
       body,
       location,
@@ -1158,6 +1159,7 @@ impl Parser {
         start: util::Position { line: 0, column: 0 },
         end: util::Position { line: 0, column: 0 },
         length: 0,
+        file_name:self.file_name.clone()
       },
     })
   }
@@ -1166,7 +1168,7 @@ impl Parser {
     let is_const = token.value == "const";
     let mut semi_token = SemiToken {
       value: token.value,
-      location: token.location,
+      location: token.location.clone(),
     };
 
     let identifier = self.expect(TokenType::Identifier, "Se esperaba un identificador");
@@ -1283,7 +1285,7 @@ impl Parser {
     let operator_t = self.at();
     let operator: String = if let TokenType::Operator(_) = operator_t.token_type {
       self.eat().value
-    } else {
+    }else{
       "".to_string()
     };
     self.parse_complex_expr(
@@ -1553,10 +1555,10 @@ impl Parser {
       let data = ast::Node::UnaryBack(ast::NodeUnary {
         operator,
         operand: left.to_box(),
-        location: operator_st.location,
+        location: operator_st.location.clone(),
         file: self.file_name.clone(),
       });
-      let location = operator_st.location;
+      let location = operator_st.location.clone();
       return Ok((
         self.parse_complex_expr(data, operator_st)?,
         SemiToken {

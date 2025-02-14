@@ -25,7 +25,7 @@ pub fn token_identifier(
   ch: char,
   position: util::Position,
   ref line: String,
-  meta: String,
+  file_name: String,
 ) -> (util::Token<TokenType>, usize) {
   let col = position.column;
   let mut i = col;
@@ -53,9 +53,10 @@ pub fn token_identifier(
             line: position.line,
           },
           length: 1,
+          file_name:file_name.clone()
         },
         value: ch.to_string(),
-        meta,
+        meta: file_name,
       },
       0,
     );
@@ -69,9 +70,10 @@ pub fn token_identifier(
         line: position.line,
       },
       length: i - col,
+      file_name:file_name.clone()
     },
     value,
-    meta,
+    meta: file_name,
   };
 
   (token, i - col - 1)

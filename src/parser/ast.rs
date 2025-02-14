@@ -1,6 +1,6 @@
-use util::List; // is a Vec clonable
+use util::{List, Token}; // is a Vec clonable
 
-use crate::lexer::KeywordsType; // is a enum with keywords
+use crate::{lexer::KeywordsType, TokenType}; // is a enum with keywords
 
 pub type BNode = Box<Node>;
 
@@ -73,36 +73,37 @@ impl Node {
   }
   pub fn get_location(&self) -> util::Location {
     match self {
-      Node::Await(node) | Node::Lazy(node) => node.location,
-      Node::Byte(node) => node.location,
-      Node::Program(node) => node.location,
-      Node::String(node) => node.location,
-      Node::Number(node) => node.location,
-      Node::Object(node) => node.location,
-      Node::Array(node) => node.location,
-      Node::Identifier(node) => node.location,
-      Node::VarDecl(node) => node.location,
-      Node::Name(node) => node.location,
-      Node::Assignment(node) => node.location,
-      Node::Class(node) => node.location,
-      Node::While(node) | Node::DoWhile(node) => node.location,
-      Node::Try(node) => node.location,
-      Node::Function(node) => node.location,
-      Node::If(node) => node.location,
-      Node::Import(node) => node.location,
-      Node::Export(node) | Node::Throw(node) => node.location,
-      Node::UnaryFront(node) | Node::UnaryBack(node) => node.location,
-      Node::Binary(node) => node.location,
-      Node::Member(node) => node.location,
-      Node::Call(node) => node.location,
-      Node::Return(node) => node.location,
-      Node::LoopEdit(node) => node.location,
-      Node::For(node) => node.location,
-      Node::Block(node) => node.location,
+      Node::Await(node) | Node::Lazy(node) => node.location.clone(),
+      Node::Byte(node) => node.location.clone(),
+      Node::Program(node) => node.location.clone(),
+      Node::String(node) => node.location.clone(),
+      Node::Number(node) => node.location.clone(),
+      Node::Object(node) => node.location.clone(),
+      Node::Array(node) => node.location.clone(),
+      Node::Identifier(node) => node.location.clone(),
+      Node::VarDecl(node) => node.location.clone(),
+      Node::Name(node) => node.location.clone(),
+      Node::Assignment(node) => node.location.clone(),
+      Node::Class(node) => node.location.clone(),
+      Node::While(node) | Node::DoWhile(node) => node.location.clone(),
+      Node::Try(node) => node.location.clone(),
+      Node::Function(node) => node.location.clone(),
+      Node::If(node) => node.location.clone(),
+      Node::Import(node) => node.location.clone(),
+      Node::Export(node) | Node::Throw(node) => node.location.clone(),
+      Node::UnaryFront(node) | Node::UnaryBack(node) => node.location.clone(),
+      Node::Binary(node) => node.location.clone(),
+      Node::Member(node) => node.location.clone(),
+      Node::Call(node) => node.location.clone(),
+      Node::Return(node) => node.location.clone(),
+      Node::LoopEdit(node) => node.location.clone(),
+      Node::For(node) => node.location.clone(),
+      Node::Block(node) => node.location.clone(),
       Node::None => util::Location {
         start: util::Position { line: 0, column: 0 },
         end: util::Position { line: 0, column: 0 },
         length: 0,
+        file_name: "<Modulo Nativo>".to_string()
       },
     }
   }
@@ -469,6 +470,18 @@ pub struct NodeError {
   pub message: String,
   pub location: util::Location,
   pub meta: String,
+}
+impl NodeError {
+  pub fn new(token: &Token<TokenType>, message: Option<String>) -> Self {
+    Self {
+      location: token.location.clone(),
+      meta: token.meta.clone(),
+      message: match message {
+        Some(msg) => msg,
+        None => format!("Error en {}", token.value),
+      },
+    }
+  }
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct NodeUnary {

@@ -18,7 +18,7 @@ const OPERATORS: &str = "+-*/%=&|<>!^~?";
 const PUNCTUATION: &str = "(){}[],.;:";
 
 fn token_error(token: &util::Token<TokenType>) -> ErrorTypes {
-  let (file_name, data_line, token_value) = split_meta(&token.meta);
+  let (data_line, token_value) = split_meta(&token.meta);
   let line = token.location.start.line + 1;
   let column_token = token.location.start.column + 1;
   let column = token.location.end.column;
@@ -35,7 +35,7 @@ fn token_error(token: &util::Token<TokenType>) -> ErrorTypes {
   };
   let lines = [
     format!("{}", token.value),
-    format!("{}{cyan_arrow} {}:{}:{}", str_init, file_name, line, column),
+    format!("{}{cyan_arrow} {}:{}:{}", str_init, token.location.file_name, line, column),
     format!("{} {cyan_line}", str_init),
     format!("{} {cyan_line} {}", to_cyan(&str_line), data_line),
     format!(
@@ -63,6 +63,7 @@ fn comment(_: char, position: Position, line: String, meta: String) -> (Token<To
         column: length,
       },
       length,
+      file_name: meta.clone()
     },
     meta,
   };
@@ -102,7 +103,7 @@ pub fn tokenizer(input: String, file_name: String) -> Vec<util::Token<TokenType>
         util::TokenOptionResult::Full(comment),
       ),
     ],
-    file_name,
+    file_name.clone(),
   );
   let tokens = match tokens {
     Ok(mut t) => {
@@ -117,6 +118,7 @@ pub fn tokenizer(input: String, file_name: String) -> Vec<util::Token<TokenType>
           start: pos,
           end: pos,
           length: 0,
+          file_name
         },
         value: "".to_string(),
         meta: "".to_string(),

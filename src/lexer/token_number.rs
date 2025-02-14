@@ -12,7 +12,7 @@ fn is_number(c: char, use_dot: bool) -> bool {
 fn number_literal(
   position: util::Position,
   line: String,
-  meta: String,
+  file_name: String,
 ) -> (util::Token<TokenType>, usize) {
   let col = position.column;
   let mut i = col;
@@ -42,9 +42,10 @@ fn number_literal(
         line: position.line,
       },
       length: i - col,
+      file_name: file_name.clone(),
     },
     value,
-    meta,
+    meta: file_name,
   };
   (token, i - col - 1)
 }
@@ -53,7 +54,7 @@ fn number_base(
   c: char,
   pos: util::Position,
   line: String,
-  meta: String,
+  file_name: String,
 ) -> (util::Token<TokenType>, usize) {
   let col = pos.column;
   let mut i = col + 1;
@@ -71,9 +72,10 @@ fn number_base(
               line: pos.line,
             },
             length: i - col,
+            file_name: file_name.clone(),
           },
           value: "0".to_string(),
-          meta,
+          meta: file_name,
         },
         i - col - 1,
       );
@@ -111,9 +113,10 @@ fn number_base(
                   line: pos.line,
                 },
                 length: i - col,
+                file_name: file_name.clone(),
               },
               value: format!("No se pudo analizar el byte"),
-              meta,
+              meta: file_name,
             },
             i - col - 1,
           )
@@ -128,9 +131,10 @@ fn number_base(
                   line: pos.line,
                 },
                 length: i - col,
+                file_name: file_name.clone(),
               },
               value,
-              meta,
+              meta: file_name,
             },
             i - col - 1,
           )
@@ -159,9 +163,10 @@ fn number_base(
                 line: pos.line,
               },
               length: 1,
+              file_name: file_name.clone(),
             },
             value: "Se esperaba un número base".to_string(),
-            meta: format!("{meta}\0{line}\00$"),
+            meta: format!("{line}\00$"),
           },
           0,
         );
@@ -190,9 +195,10 @@ fn number_base(
                 line: pos.line,
               },
               length: i - col,
+              file_name: file_name.clone(),
             },
             value: "Se esperaba un número base".to_string(),
-            meta: format!("{meta}\0{line}\00$"),
+            meta: format!("{line}\00$"),
           },
           i - col - 1,
         );
@@ -209,9 +215,10 @@ fn number_base(
                 line: pos.line,
               },
               length: i - col,
+              file_name: file_name.clone(),
             },
             value: "Se esperaba un número en base 10".to_string(),
-            meta: format!("{meta}\0{line}\00${base_str}"),
+            meta: format!("{line}\00${base_str}"),
           },
           i - col - 1,
         );
@@ -228,9 +235,10 @@ fn number_base(
                 line: pos.line,
               },
               length: i - col,
+              file_name: file_name.clone(),
             },
             value: "La base debe estar entre 2 y 36".to_string(),
-            meta: format!("{meta}\0{line}\00${base_str}"),
+            meta: format!("{line}\00${base_str}"),
           },
           i - col - 1,
         );
@@ -248,9 +256,10 @@ fn number_base(
                 line: pos.line,
               },
               length: i - col,
+              file_name: file_name.clone(),
             },
             value: "Se esperaba un \"~\" para el valor".to_string(),
-            meta: format!("{meta}\0{line}\00${base}"),
+            meta: format!("{line}\00${base}"),
           },
           i - col - 1,
         );
@@ -285,9 +294,10 @@ fn number_base(
         line: pos.line,
       },
       length: i - col,
+      file_name: file_name.clone(),
     },
     value: format!("0${}~{}", base, value),
-    meta,
+    meta: file_name,
   };
   (token, i - col - 1)
 }
