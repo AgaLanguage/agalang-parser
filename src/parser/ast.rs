@@ -15,8 +15,9 @@ impl<T, U> From<Node> for Result<Result<Node, T>, U> {
   }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Default, Eq, Hash)]
 pub enum Node {
+  #[default]
   None,
   Program(NodeProgram),
 
@@ -383,7 +384,7 @@ fn data_format(data: String) -> String {
     .collect::<Vec<String>>()
     .join("\n")
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeBlock {
   pub body: List<Node>,
   pub in_function: bool,
@@ -394,64 +395,68 @@ impl NodeBlock {
   pub fn len(&self) -> usize {
     self.body.len()
   }
-  pub fn iter(&self) -> std::slice::Iter<Node> {
-    self.body.iter()
-  }
   pub fn to_node(self) -> Node {
     Node::Block(self)
   }
 }
+impl IntoIterator for NodeBlock {
+  type Item = Node;
+  type IntoIter = std::vec::IntoIter<Node>;
+  fn into_iter(self) -> Self::IntoIter {
+    self.body.into_iter()
+  }
+}
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeProgram {
   pub body: NodeBlock,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub enum StringData {
   Str(String),
   Id(String),
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeString {
   pub value: List<StringData>,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeNumber {
   pub base: u8,
   pub value: String,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeByte {
   pub value: u8,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub enum NodeProperty {
   Property(String, Node),
   Dynamic(Node, Node),
   Iterable(Node),
   Indexable(Node),
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeObject {
   pub properties: List<NodeProperty>,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeArray {
   pub elements: List<NodeProperty>,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeVarDecl {
   pub name: String,
   pub value: Option<BNode>,
@@ -459,13 +464,13 @@ pub struct NodeVarDecl {
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeIdentifier {
   pub name: String,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeError {
   pub message: String,
   pub location: util::Location,
@@ -483,14 +488,14 @@ impl NodeError {
     }
   }
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeUnary {
   pub operator: String,
   pub operand: BNode,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeBinary {
   pub operator: String,
   pub left: BNode,
@@ -498,14 +503,14 @@ pub struct NodeBinary {
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeAssignment {
   pub identifier: BNode,
   pub value: BNode,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeMember {
   pub object: BNode,
   pub member: BNode,
@@ -514,21 +519,21 @@ pub struct NodeMember {
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeCall {
   pub callee: BNode,
   pub arguments: List<Node>,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeWhile {
   pub condition: BNode,
   pub body: NodeBlock,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeIf {
   pub condition: BNode,
   pub body: NodeBlock,
@@ -537,7 +542,7 @@ pub struct NodeIf {
   pub file: String,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeFunction {
   pub is_async: bool,
   pub name: String,
@@ -546,24 +551,24 @@ pub struct NodeFunction {
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeReturn {
   pub value: Option<BNode>,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub enum NodeLoopEditType {
   Break,
   Continue,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeLoopEdit {
   pub action: NodeLoopEditType,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeTry {
   pub body: NodeBlock,
   pub catch: Option<(String, NodeBlock)>,
@@ -571,7 +576,7 @@ pub struct NodeTry {
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeClassProperty {
   pub name: String,
   pub value: Option<BNode>,
@@ -580,7 +585,7 @@ pub struct NodeClassProperty {
   2: is_public */
   pub meta: u8,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeClass {
   pub name: String,
   pub extend_of: Option<NodeIdentifier>,
@@ -588,7 +593,7 @@ pub struct NodeClass {
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeImport {
   pub path: String,
   pub is_lazy: bool,
@@ -596,13 +601,13 @@ pub struct NodeImport {
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeValue {
   pub value: BNode,
   pub location: util::Location,
   pub file: String,
 }
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeFor {
   pub init: BNode,
   pub condition: BNode,
@@ -612,7 +617,7 @@ pub struct NodeFor {
   pub file: String,
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeExpressionMedicator {
   pub expression: BNode,
   pub location: util::Location,
