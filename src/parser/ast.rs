@@ -57,6 +57,12 @@ pub enum Node {
   LoopEdit(NodeLoopEdit),
 }
 impl Node {
+  pub fn is_none(&self) ->bool {
+    match self {
+      Node::None => true,
+      _ => false,
+    }
+  }
   pub fn is_identifier(&self) -> bool {
     match self {
       Node::Identifier(_) => true,
