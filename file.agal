@@ -1,6 +1,6 @@
-exportar clase Nombre {
+exporta clase Nombre {
 }
-exportar fn Hola(){
+exporta fn Hola(){
     ret 3;
 }
 a = [2 == 3, 3];
