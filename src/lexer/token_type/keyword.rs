@@ -28,7 +28,8 @@ pub enum KeywordsType {
   Await,
   Async,
 }
-const KEYWORDS: [KeywordsType; 27] = [
+type KeywordsList = [KeywordsType; 27];
+const KEYWORDS: KeywordsList = [
   KeywordsType::None,
   KeywordsType::Define,
   KeywordsType::Constant,
@@ -58,7 +59,7 @@ const KEYWORDS: [KeywordsType; 27] = [
   KeywordsType::Async,
 ];
 impl KeywordsType {
-  pub const fn iter() -> [KeywordsType; 27] {
+  pub const fn iter() -> KeywordsList {
     KEYWORDS
   }
   pub const fn as_str(&self) -> &str {
@@ -70,7 +71,7 @@ impl KeywordsType {
       KeywordsType::Function => "fn",
       KeywordsType::If => "si",
       KeywordsType::Else => "ent",
-      KeywordsType::Do => "hacer",
+      KeywordsType::Do => "haz",
       KeywordsType::While => "mien",
       KeywordsType::Para => "para",
       KeywordsType::Romper => "rom",
@@ -80,15 +81,15 @@ impl KeywordsType {
       KeywordsType::Static => "est",
       KeywordsType::Public => "pub",
       KeywordsType::Extender => "extiende",
-      KeywordsType::Try => "intentar",
-      KeywordsType::Catch => "capturar",
+      KeywordsType::Try => "intenta",
+      KeywordsType::Catch => "captura",
       KeywordsType::Finally => "finalmente",
-      KeywordsType::Export => "exportar",
-      KeywordsType::Import => "importar",
+      KeywordsType::Export => "exporta",
+      KeywordsType::Import => "importa",
       KeywordsType::As => "como",
-      KeywordsType::Throw => "lanzar",
+      KeywordsType::Throw => "lanza",
       KeywordsType::Lazy => "vago",
-      KeywordsType::Await => "esperar",
+      KeywordsType::Await => "espera",
       KeywordsType::Async => "asinc",
     }
   }
