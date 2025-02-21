@@ -1,20 +1,33 @@
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum OperatorType {
-  // + - * / % & | ^ ~ ! = < >
   None,
+  /// +
   Plus,
+  /// -
   Minus,
+  /// *
   Star,
+  /// /
   Division,
-  Module,
+  /// %
+  Modulo,
+  /// &
   And,
+  /// |
   Or,
-  Power,
-  Negative,
+  /// ^
+  Exponential,
+  /// ~
+  Approximate,
+  /// !
   Not,
+  /// =
   Equals,
+  /// <
   LessThan,
+  /// >
   GreaterThan,
+  /// ?
   QuestionMark,
 }
 impl OperatorType {
@@ -24,11 +37,11 @@ impl OperatorType {
       '-' => Self::Minus,
       '*' => Self::Star,
       '/' => Self::Division,
-      '%' => Self::Module,
+      '%' => Self::Modulo,
       '&' => Self::And,
       '|' => Self::Or,
-      '^' => Self::Power,
-      '~' => Self::Negative,
+      '^' => Self::Exponential,
+      '~' => Self::Approximate,
       '!' => Self::Not,
       '=' => Self::Equals,
       '<' => Self::LessThan,

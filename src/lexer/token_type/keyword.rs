@@ -27,8 +27,9 @@ pub enum KeywordsType {
   Lazy,
   Await,
   Async,
+  Console,
 }
-type KeywordsList = [KeywordsType; 27];
+type KeywordsList = [KeywordsType; 28];
 const KEYWORDS: KeywordsList = [
   KeywordsType::None,
   KeywordsType::Define,
@@ -57,6 +58,7 @@ const KEYWORDS: KeywordsList = [
   KeywordsType::Lazy,
   KeywordsType::Await,
   KeywordsType::Async,
+  KeywordsType::Console
 ];
 impl KeywordsType {
   pub const fn iter() -> KeywordsList {
@@ -91,6 +93,7 @@ impl KeywordsType {
       KeywordsType::Lazy => "vago",
       KeywordsType::Await => "espera",
       KeywordsType::Async => "asinc",
+      KeywordsType::Console => "csl",
     }
   }
   pub fn to_string(&self) -> String {

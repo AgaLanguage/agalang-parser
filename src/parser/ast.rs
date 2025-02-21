@@ -46,6 +46,7 @@ pub enum Node {
   Block(NodeBlock),
   Await(NodeExpressionMedicator),
   Lazy(NodeExpressionMedicator),
+  Console(NodeConsole),
 
   // Expressions //
   UnaryFront(NodeUnary),
@@ -57,7 +58,7 @@ pub enum Node {
   LoopEdit(NodeLoopEdit),
 }
 impl Node {
-  pub fn is_none(&self) ->bool {
+  pub fn is_none(&self) -> bool {
     match self {
       Node::None => true,
       _ => false,
@@ -106,11 +107,17 @@ impl Node {
       Node::LoopEdit(node) => node.location.clone(),
       Node::For(node) => node.location.clone(),
       Node::Block(node) => node.location.clone(),
+      Node::Console(node) => match node {
+        NodeConsole::Input { location, .. } => location,
+        NodeConsole::Output { location, .. } => location,
+        NodeConsole::Full { location, .. } => location,
+      }
+      .clone(),
       Node::None => util::Location {
         start: util::Position { line: 0, column: 0 },
         end: util::Position { line: 0, column: 0 },
         length: 0,
-        file_name: "<Modulo Nativo>".to_string()
+        file_name: "<Modulo Nativo>".to_string(),
       },
     }
   }
@@ -141,7 +148,7 @@ impl Node {
       Node::Return(node) => &node.file,
       Node::LoopEdit(node) => &node.file,
       Node::For(node) => &node.file,
-      Node::Block(_) | Node::None => "none",
+      Node::Console(_) | Node::Block(_) | Node::None => "none",
     };
     return file.to_string();
   }
@@ -177,6 +184,7 @@ impl Node {
       Node::For(_) => "Para",
       Node::Block(_) => "Bloque",
       Node::None => "Nada",
+      Node::Console(_) => "Consola",
       Node::Throw(_) => "Lanzar",
     }
   }
@@ -340,14 +348,14 @@ impl std::fmt::Display for Node {
         data_format(node.body.join("\n"))
       ),
       Node::UnaryFront(node) | Node::UnaryBack(node) => format!(
-        "NodeUnary: \"{}\" para {{\n{}\n}}",
+        "NodeUnary: \"{:?}\" para {{\n{}\n}}",
         node.operator,
         data_format(node.operand.to_string())
       ),
       Node::Binary(node) => format!(
-        "NodeBinary:\n{}\n{}\n{}",
+        "NodeBinary:\n{}\n {:?}\n{}",
         data_format(node.left.to_string()),
-        data_format(node.operator.clone()),
+        node.operator,
         data_format(node.right.to_string())
       ),
       Node::Member(node) => format!(
@@ -378,17 +386,82 @@ impl std::fmt::Display for Node {
         }
       ),
       Node::None => "NodeNone".to_string(),
+      Node::Console(NodeConsole::Input { identifier, .. }) => format!("NodeConsole: Input ({})", identifier),
+      Node::Console(NodeConsole::Output { value, .. }) => format!("NodeConsole: Output\n{}",data_format(value.to_string())),
+      Node::Console(NodeConsole::Full { identifier, value,.. }) => format!("NodeConsole: Output\n{}\nInput ({})", data_format(value.to_string()), identifier),
     };
     write!(f, "{}", str)
   }
 }
-
+impl std::fmt::Display for NodeOperator {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    let str = match self {
+      Self::None => "None",
+      Self::LessThan => "<",
+      Self::LessThanOrEqual => "<=",
+      Self::BitMoveLeft => "<<",
+      Self::BitMoveLeftEqual => "<<=",
+      Self::GreaterThan => ">",
+      Self::GreaterThanOrEqual => ">=",
+      Self::BitMoveRight => ">>",
+      Self::BitMoveRightEqual => ">>=",
+      Self::Equal => "==",
+      Self::Plus => "+",
+      Self::PlusEqual => "+=",
+      Self::Minus => "-",
+      Self::MinusEqual => "-",
+      Self::Multiply => "*",
+      Self::MultiplyEqual => "*=",
+      Self::Modulo => "%",
+      Self::ModuloEqual => "%=",
+      Self::Exponential => "^",
+      Self::ExponentialEqual => "^=",
+      Self::Division => "/",
+      Self::DivisionEqual => "/=",
+      Self::FloorDivision => "//",
+      Self::FloorDivisionEqual => "//=",
+      Self::QuestionMark => "//",
+      Self::Nullish => "//",
+      Self::NullishEqual => "??=",
+      Self::BitAnd => "&",
+      Self::BitAndEqual => "&=",
+      Self::And => "&&",
+      Self::AndEqual => "&&=",
+      Self::BitOr => "|",
+      Self::BitOrEqual => "|=",
+      Self::Or => "||",
+      Self::OrEqual => "||=",
+      Self::Approximate => "~",
+      Self::ApproximateEqual => "~=",
+      Self::Not => "!",
+      Self::NotEqual => "!=",
+      Self::Assign => "=",
+    };
+    write!(f, "{}", str)
+  }
+}
 fn data_format(data: String) -> String {
   data
     .split("\n")
     .map(|line| format!("  {}", line))
     .collect::<Vec<String>>()
     .join("\n")
+}
+#[derive(Clone, PartialEq, Debug, Eq, Hash)]
+pub enum NodeConsole {
+  Output {
+    value: BNode,
+    location: util::Location,
+  },
+  Input {
+    location: util::Location,
+    identifier: String,
+  },
+  Full {
+    value: BNode,
+    location: util::Location,
+    identifier: String,
+  }
 }
 #[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeBlock {
@@ -496,14 +569,97 @@ impl NodeError {
 }
 #[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeUnary {
-  pub operator: String,
+  pub operator: NodeOperator,
   pub operand: BNode,
   pub location: util::Location,
   pub file: String,
 }
+#[derive(Clone, PartialEq, Debug, Eq, Hash, Copy)]
+pub enum NodeOperator {
+  /// This value is used when the operator is not defined
+  None,
+  /// <
+  LessThan,
+  /// <=
+  LessThanOrEqual,
+  /// <<
+  BitMoveLeft,
+  /// <<=
+  BitMoveLeftEqual,
+  /// >
+  GreaterThan,
+  /// >=
+  GreaterThanOrEqual,
+  /// >>
+  BitMoveRight,
+  /// >>=
+  BitMoveRightEqual,
+  /// +
+  Plus,
+  /// +=
+  PlusEqual,
+  /// -
+  Minus,
+  /// -=
+  MinusEqual,
+  /// *
+  Multiply,
+  /// *=
+  MultiplyEqual,
+  /// %
+  Modulo,
+  /// %=
+  ModuloEqual,
+  /// ^
+  Exponential,
+  /// ^=
+  ExponentialEqual,
+  /// /
+  Division,
+  /// /=
+  DivisionEqual,
+  /// //
+  FloorDivision,
+  /// //=
+  FloorDivisionEqual,
+  /// ?
+  QuestionMark,
+  /// ??
+  Nullish,
+  /// ??=
+  NullishEqual,
+  /// &
+  BitAnd,
+  /// &=
+  BitAndEqual,
+  /// &&
+  And,
+  /// &&=
+  AndEqual,
+  /// |
+  BitOr,
+  /// |=
+  BitOrEqual,
+  /// ||
+  Or,
+  /// ||=
+  OrEqual,
+  /// ~
+  Approximate,
+  /// ~=
+  ApproximateEqual,
+  /// !
+  Not,
+  /// !=
+  NotEqual,
+  /// =
+  Assign,
+  /// ==
+  Equal,
+}
 #[derive(Clone, PartialEq, Debug, Eq, Hash)]
 pub struct NodeBinary {
-  pub operator: String,
+  pub operator: NodeOperator,
   pub left: BNode,
   pub right: BNode,
   pub location: util::Location,

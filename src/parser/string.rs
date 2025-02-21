@@ -27,7 +27,7 @@ pub fn complex_string(token_string: Token<TokenType>, line: &str) -> Result<Node
         return Err(NodeError {
           message: "No se encontro la apertura de el identificador".to_string(),
           location: token_string.location,
-          meta: format!("{}\0{}\0{}", token_string.meta, line, string),
+          meta: format!("{}\0{}", line, string),
         });
       }
       let nc = nc.unwrap();
@@ -58,7 +58,7 @@ pub fn complex_string(token_string: Token<TokenType>, line: &str) -> Result<Node
       return Err(NodeError {
         message: "Se esperaba un caracter literal".to_string(),
         location: token_string.location,
-        meta: format!("{}\0{}\0{}", token_string.meta, line, string),
+        meta: format!("{}\0{}", line, string),
       });
     }
     let nc = nc.unwrap();
@@ -76,7 +76,7 @@ pub fn complex_string(token_string: Token<TokenType>, line: &str) -> Result<Node
     return Err(NodeError {
       message: "Se esperaba cierre del identificador".to_string(),
       location: token_string.location,
-      meta: format!("{}\0{}\0{}", token_string.meta, line, string),
+      meta: format!("{}\0{}", line, string),
     });
   }
   if current.len() > 0 {
