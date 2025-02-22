@@ -224,7 +224,7 @@ fn number_base(
         );
       }
       let base_number = base_number.unwrap();
-      if base_number < 2 || base_number > 36 {
+      if base_number <= 2 || base_number >= 36 {
         return (
           util::Token {
             token_type: TokenType::Error,
