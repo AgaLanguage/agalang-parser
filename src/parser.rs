@@ -1836,8 +1836,8 @@ impl Parser {
       .into(),
       TokenType::Number => {
         self.eat();
-        let data = token.value.split("$").collect::<Vec<_>>()[1];
-        let base_value = data.split("~").collect::<Vec<_>>();
+        let data = token.value.split("n").collect::<Vec<_>>()[1];
+        let base_value = data.split("|").collect::<Vec<_>>();
         let base = base_value[0].parse::<u8>().unwrap();
         let value = base_value[1].to_string();
         ast::Node::Number(ast::NodeNumber {
