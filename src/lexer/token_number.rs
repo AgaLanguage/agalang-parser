@@ -87,8 +87,8 @@ fn number_base(
       if let Some('y') = line.chars().nth(i) {
         i += 1;
         let mut value = String::new();
-        let mut x = 1;
-        while x <= 8 {
+        let mut x = 0;
+        while x < 8 {
           let bit = line.chars().nth(i);
           if bit.is_none() {
             break;
@@ -102,7 +102,7 @@ fn number_base(
           }
           i += 1;
         }
-        return if x == 1 {
+        return if x == 0 {
           (
             util::Token {
               token_type: TokenType::Error,
@@ -173,15 +173,14 @@ fn number_base(
       }
       let mut base_str = String::new();
       while i < line.len() {
-        let c = line.chars().nth(i);
-        if c.is_none() {
+        let ch = match line.chars().nth(i) {
+          Some(c) => c,
+          None => break,
+        };
+        if !ch.is_digit(10) {
           break;
         }
-        let c = c.unwrap();
-        if c.is_digit(10) {
-          break;
-        }
-        base_str.push(c);
+        base_str.push(ch);
         i += 1;
       }
       if base_str.len() == 0 {
@@ -203,7 +202,7 @@ fn number_base(
           i - col - 1,
         );
       }
-      let base_number = base_str.parse::<u8>();
+      let base_number = base_str.parse();
       if base_number.is_err() {
         return (
           util::Token {
@@ -224,7 +223,7 @@ fn number_base(
         );
       }
       let base_number = base_number.unwrap();
-      if base_number <= 2 || base_number >= 36 {
+      if  2 > base_number || base_number > 36{
         return (
           util::Token {
             token_type: TokenType::Error,
@@ -272,19 +271,62 @@ fn number_base(
 
   // save the first index of the value
   let value_index = i;
-
+  let mut value = String::new();
   while i < line.len() {
-    let c = line.chars().nth(i);
-    if c.is_none() {
+    let ch = match line.chars().nth(i) {
+      Some(c) => c,
+      None => break,
+    };
+    if ch == '_' {
+      i += 1;
+    } else if ch.is_digit(base) {
+      i += 1;
+      value.push(ch);
+    } else {
       break;
     }
-    let c = c.unwrap();
-    if c.is_digit(base as u32) {
-      break;
-    }
-    i += 1;
   }
-  let value = line[value_index..i].to_string();
+  if i - value_index == 0 {
+    return (
+      util::Token {
+        token_type: TokenType::Error,
+        location: Location {
+          start: pos,
+          end: util::Position {
+            column: i,
+            line: pos.line,
+          },
+          length: i - col,
+          file_name: file_name.clone(),
+        },
+        value: "Se esperaba un número".to_string(),
+        meta: format!("{line}\00${base}"),
+      },
+      i - col - 1,
+    );
+  }
+  let value = match line.get(value_index..i) {
+    Some(value) => value,
+    None => {
+      return (
+        util::Token {
+          token_type: TokenType::Error,
+          location: Location {
+            start: pos,
+            end: util::Position {
+              column: i,
+              line: pos.line,
+            },
+            length: i - col,
+            file_name: file_name.clone(),
+          },
+          value: "Se esperaba un número".to_string(),
+          meta: format!("{line}\00${base}"),
+        },
+        i - col - 1,
+      )
+    }
+  };
   let token = util::Token {
     token_type: TokenType::Number,
     location: Location {
@@ -310,7 +352,7 @@ pub fn token_number(
 ) -> (util::Token<TokenType>, usize) {
   if c == '0' {
     let next = line.chars().nth(pos.column + 1);
-    if next != None && util::is_valid_char("bodx$", next.unwrap()) {
+    if next != None && util::is_valid_char("bodxn", next.unwrap()) {
       return number_base(c, pos, line, file_name);
     }
   }
