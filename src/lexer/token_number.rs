@@ -149,7 +149,7 @@ fn number_base(
     } else if c == 'x' {
       base = 16;
       i += 1;
-    } else if c == '$' {
+    } else if c == 'n' {
       i += 1;
       if i >= line.len() {
         // not i < line.len()
@@ -198,7 +198,7 @@ fn number_base(
               file_name: file_name.clone(),
             },
             value: "Se esperaba un número base".to_string(),
-            meta: format!("{line}\00$"),
+            meta: format!("{line}\00n"),
           },
           i - col - 1,
         );
@@ -218,7 +218,7 @@ fn number_base(
               file_name: file_name.clone(),
             },
             value: "Se esperaba un número en base 10".to_string(),
-            meta: format!("{line}\00${base_str}"),
+            meta: format!("{line}\00n{base_str}"),
           },
           i - col - 1,
         );
@@ -238,7 +238,7 @@ fn number_base(
               file_name: file_name.clone(),
             },
             value: "La base debe estar entre 2 y 36".to_string(),
-            meta: format!("{line}\00${base_str}"),
+            meta: format!("{line}\00n{base_str}"),
           },
           i - col - 1,
         );
@@ -258,13 +258,13 @@ fn number_base(
               length: i - col,
               file_name: file_name.clone(),
             },
-            value: "Se esperaba un \"~\" para el valor".to_string(),
+            value: "Se esperaba un \"|\" para el valor".to_string(),
             meta: format!("{line}\00${base}"),
           },
           i - col - 1,
         );
       }
-      if value_char.unwrap() == '~' {
+      if value_char.unwrap() == '|' {
         i += 1;
       }
     }
@@ -296,7 +296,7 @@ fn number_base(
       length: i - col,
       file_name: file_name.clone(),
     },
-    value: format!("0${}~{}", base, value),
+    value: format!("0n{}|{}", base, value),
     meta: file_name,
   };
   (token, i - col - 1)
